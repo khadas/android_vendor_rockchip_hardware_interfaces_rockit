@@ -111,6 +111,7 @@ private:
     bool                         mSurfaceShow;
     bool                         mBindThread;
     bool                         mInitialized;
+    int                          mGpuType;
     Mutex                        mRenderLock;
 };
 

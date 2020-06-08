@@ -26,6 +26,7 @@
 #include <input/DisplayViewport.h>
 #include <utils/Log.h>
 #include <cutils/properties.h> // for property_get
+#include "RTChips.h"
 
 #ifdef LOG_TAG
 #undef LOG_TAG
@@ -39,8 +40,20 @@
 
 using namespace ::android;
 
+enum RkGpuType {
+    RK_GPU_G6110,
+    RK_GPU_MALI,
+};
+
 RTSubteSink::RTSubteSink() {
     mInitialized = false;
+    mGpuType = RK_GPU_MALI;
+
+    // the gpu' ip of 3368 is g6110, and other chips is mali
+    RKChipInfo *chipInfo = getChipName();
+    if (chipInfo != NULL && (chipInfo->type == RK_CHIP_3368 || chipInfo->type == RK_CHIP_3368H)) {
+        mGpuType = RK_GPU_G6110;
+    }
 }
 
 RTSubteSink::~RTSubteSink() {
@@ -414,12 +427,12 @@ int RTSubteSink::initTexture(void* data,int width,int height,GLuint& texture) {
 
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR );
     glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
-   #if 0
-    if (PlatformInstance->shouldGlSwap()) {
+
+    if (RK_GPU_G6110 == mGpuType) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     }
-  #endif
+
     return NO_ERROR;
 }
 
