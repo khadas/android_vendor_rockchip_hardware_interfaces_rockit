@@ -9,6 +9,8 @@
 
 #include <sys/mman.h>
 #include <cutils/properties.h>
+#include <hardware/hardware_rockchip.h>
+#include <hardware/gralloc_rockchip.h>
 
 #define HAS_ATOMIC 1
 

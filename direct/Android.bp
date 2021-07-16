@@ -36,6 +36,7 @@ cc_library_shared {
 
     header_libs: [
         "libmediametrics_headers",
+        "libhardware_rockchip_headers",
     ],
 
     static_libs: [

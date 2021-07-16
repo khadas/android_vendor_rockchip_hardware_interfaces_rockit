@@ -63,7 +63,7 @@ int32_t RTAudioSinkCallback::open(void *param) {
 
     return (int32_t)mAudioSink->open(mAudioSinkParam.sampleRate,
                                      mAudioSinkParam.channels,
-                                     mAudioSinkParam.channelMask,
+                                     (audio_channel_mask_t)mAudioSinkParam.channelMask,
                                      (audio_format_t)mAudioSinkParam.format,
                                      bufferCount, /* buffer count */
                                      NULL, /* callback */

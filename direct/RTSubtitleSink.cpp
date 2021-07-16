@@ -21,7 +21,7 @@
 #include "RTGraphicWindowApi.h"
 #include "HdmiDefine.h"
 
-#include <ui/DisplayConfig.h>
+#include <ui/DisplayMode.h>
 #include <ui/DisplayState.h>
 #include <input/DisplayViewport.h>
 #include <utils/Log.h>
@@ -495,24 +495,24 @@ void RTSubteSink::createSubitleSurface() {
     if(mClient == NULL) {
         mClient = new SurfaceComposerClient();
         if (mClient != NULL) {
-            DisplayConfig config;
+            ui::DisplayMode mode;
             ui::DisplayState state;
-            getSurfaceMaxWidthAndHeight(config,state, 0);
+            getSurfaceMaxWidthAndHeight(mode,state, 0);
             // create the native surface
-            mSurfaceControl = mClient->createSurface(String8("SubtitleSurface"),config.resolution.getWidth(),config.resolution.getHeight(),PIXEL_FORMAT_RGBA_8888);
+            mSurfaceControl = mClient->createSurface(String8("SubtitleSurface"),mode.resolution.getWidth(),mode.resolution.getHeight(),PIXEL_FORMAT_RGBA_8888);
             if (mSurfaceControl != NULL) {
                 GraphicWindowApi::OpenSurfaceTransaction();
                 Transaction t;
                 GraphicWindowApi::SetSurfaceLayer(mSurfaceControl, &t, mSubtitleZOrder);
                 GraphicWindowApi::SetSurfacePosition(mSurfaceControl, &t, 0, 0);
-                GraphicWindowApi::SetSurfaceSize(mSurfaceControl, &t,config.resolution.getWidth(),config.resolution.getHeight());
+                GraphicWindowApi::SetSurfaceSize(mSurfaceControl, &t,mode.resolution.getWidth(),mode.resolution.getHeight());
                 GraphicWindowApi::CloseSurfaceTransaction(&t);
                 mSurface = mSurfaceControl->getSurface();
 
                 mRect.x = 0;
                 mRect.y = 0;
-                mRect.width = config.resolution.getWidth();
-                mRect.height = config.resolution.getHeight();
+                mRect.width = mode.resolution.getWidth();
+                mRect.height = mode.resolution.getHeight();
                 mRect.rotation = (int)state.orientation;
             } else {
                 ALOGE("createSubitleSurface:mSurfaceControl == NULL");
@@ -556,12 +556,12 @@ int RTSubteSink::setSubtitleSurfaceZOrder(int order) {
 int RTSubteSink::setSubtitleSurfacePosition(int x,int y,int width,int height) {
     Mutex::Autolock autoLock(mRenderLock);
     if (mClient != NULL && mSurfaceControl != NULL) {
-        DisplayConfig config;
+        ui::DisplayMode mode;
         ui::DisplayState state;
-        getSurfaceMaxWidthAndHeight(config,state,0);
+        getSurfaceMaxWidthAndHeight(mode,state,0);
 
-        int maxWidth = config.resolution.getWidth();
-        int maxHeight = config.resolution.getHeight();
+        int maxWidth = mode.resolution.getWidth();
+        int maxHeight = mode.resolution.getHeight();
         maxWidth = (maxWidth>=width)?width:maxWidth;
         maxHeight = (maxHeight>=height)?height:maxHeight;
 
@@ -614,12 +614,12 @@ void RTSubteSink::setHdmiMode(int mode) {
 
 bool RTSubteSink::checkRotation() {
     Mutex::Autolock autoLock(mRenderLock);
-    DisplayConfig config;
+    ui::DisplayMode mode;
     ui::DisplayState state;
-    getSurfaceMaxWidthAndHeight(config, state, mDisplayDev);
-    if((config.resolution.getWidth() != mRect.width) || (config.resolution.getHeight() != mRect.height) || ((int)state.orientation != mRect.rotation)){
-        mRect.width = config.resolution.getWidth();
-        mRect.height = config.resolution.getHeight();
+    getSurfaceMaxWidthAndHeight(mode, state, mDisplayDev);
+    if((mode.resolution.getWidth() != mRect.width) || (mode.resolution.getHeight() != mRect.height) || ((int)state.orientation != mRect.rotation)){
+        mRect.width = mode.resolution.getWidth();
+        mRect.height = mode.resolution.getHeight();
         mRect.rotation = (int)state.orientation;
 
         // if rotation is happend, must set new position and size
@@ -635,7 +635,7 @@ bool RTSubteSink::checkRotation() {
     return false;
 }
 
-void RTSubteSink::getSurfaceMaxWidthAndHeight(DisplayConfig& config, ui::DisplayState& state, int displayId)
+void RTSubteSink::getSurfaceMaxWidthAndHeight(ui::DisplayMode& mode, ui::DisplayState& state, int displayId)
 {
     int width = 1920;
     int height = 1080;
@@ -643,7 +643,7 @@ void RTSubteSink::getSurfaceMaxWidthAndHeight(DisplayConfig& config, ui::Display
     status_t err;
 
     // set default value
-    config.resolution.set(width,height);
+    mode.resolution.set(width,height);
     state.orientation = (android::ui::Rotation)orientation;
 
     if(0 /*ISurfaceComposer::eDisplayIdMain*/ != displayId && 1 /*ISurfaceComposer::eDisplayIdHdmi*/ != displayId){
@@ -664,32 +664,32 @@ void RTSubteSink::getSurfaceMaxWidthAndHeight(DisplayConfig& config, ui::Display
         return;
     }
 
-    err = SurfaceComposerClient::getActiveDisplayConfig(display, &config);
+    err = SurfaceComposerClient::getActiveDisplayMode(display, &mode);
     if(err != NO_ERROR){
-        ALOGE("error: unable to get display config");
+        ALOGE("error: unable to get display mode");
         return;
     }
 
     char value[PROPERTY_VALUE_MAX];
     if((state.orientation == (android::ui::Rotation)DISPLAY_ORIENTATION_90) || (state.orientation == (android::ui::Rotation)DISPLAY_ORIENTATION_270)){
-        width = config.resolution.getWidth();
-        height = config.resolution.getHeight();
+        width = mode.resolution.getWidth();
+        height = mode.resolution.getHeight();
         orientation = (int)state.orientation;
     }else{
         property_get("ro.sf.fakerotation", value, "false");
         if (strcmp(value,"true") == 0) {
             property_get("ro.sf.hwrotation", value, "0");
             if ((strcmp(value,"90") == 0) || (strcmp(value,"270") == 0)) {
-                width = config.resolution.getWidth();
-                height = config.resolution.getHeight();
+                width = mode.resolution.getWidth();
+                height = mode.resolution.getHeight();
                 orientation = (strcmp(value,"90") == 0)?DISPLAY_ORIENTATION_90:DISPLAY_ORIENTATION_270;
             } else {
-                width = config.resolution.getWidth();
-                height = config.resolution.getHeight();
+                width = mode.resolution.getWidth();
+                height = mode.resolution.getHeight();
             }
         } else {
-            width = config.resolution.getWidth();
-            height = config.resolution.getHeight();
+            width = mode.resolution.getWidth();
+            height = mode.resolution.getHeight();
         }
     }
 
@@ -701,7 +701,7 @@ void RTSubteSink::getSurfaceMaxWidthAndHeight(DisplayConfig& config, ui::Display
         }
     }
 
-    config.resolution.set(width,height);
+    mode.resolution.set(width,height);
     state.orientation = (android::ui::Rotation)orientation;
 }
 

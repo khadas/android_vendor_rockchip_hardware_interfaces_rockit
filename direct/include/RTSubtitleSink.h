@@ -90,7 +90,7 @@ class RTSubteSink : public RTSubtitleSinkInterface {
     void                setSubtitleMode(int mode);
     void                setHdmiMode(int mode);
     bool                checkRotation();
-    void                getSurfaceMaxWidthAndHeight(DisplayConfig& config,ui::DisplayState& state,int displayId);
+    void                getSurfaceMaxWidthAndHeight(ui::DisplayMode& mode,ui::DisplayState& state,int displayId);
 
 private:
     SurfaceRect                  mRect;
