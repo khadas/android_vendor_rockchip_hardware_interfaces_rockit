@@ -49,17 +49,17 @@ class RtMetaData {
     virtual void    clear();
     virtual RT_BOOL remove(UINT64 key);
 
-    virtual RT_BOOL setCString(UINT32 key, const char *value);
-    virtual RT_BOOL setInt32(UINT32 key, INT32 value);
-    virtual RT_BOOL setInt64(UINT32 key, INT64 value);
-    virtual RT_BOOL setFloat(UINT32 key, float value);
-    virtual RT_BOOL setPointer(UINT32 key, RT_PTR value, RTMetaValueFree freeFunc = RT_NULL);
+    virtual RT_BOOL setCString(UINT64 key, const char *value);
+    virtual RT_BOOL setInt32(UINT64 key, INT32 value);
+    virtual RT_BOOL setInt64(UINT64 key, INT64 value);
+    virtual RT_BOOL setFloat(UINT64 key, float value);
+    virtual RT_BOOL setPointer(UINT64 key, RT_PTR value, RTMetaValueFree freeFunc = RT_NULL);
 
-    virtual RT_BOOL findCString(UINT32 key, const char **value) const;
-    virtual RT_BOOL findInt32(UINT32 key, INT32 *value) const;
-    virtual RT_BOOL findInt64(UINT32 key, INT64 *value) const;
-    virtual RT_BOOL findFloat(UINT32 key, float *value) const;
-    virtual RT_BOOL findPointer(UINT32 key, RT_PTR *value) const;
+    virtual RT_BOOL findCString(UINT64 key, const char **value) const;
+    virtual RT_BOOL findInt32(UINT64 key, INT32 *value) const;
+    virtual RT_BOOL findInt64(UINT64 key, INT64 *value) const;
+    virtual RT_BOOL findFloat(UINT64 key, float *value) const;
+    virtual RT_BOOL findPointer(UINT64 key, RT_PTR *value) const;
 
     virtual RT_BOOL setCString(const char* key, const char *value);
     virtual RT_BOOL setInt32(const char* key, INT32 value);
