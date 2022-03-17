@@ -260,7 +260,10 @@ INT32 RTSurfaceCallback::allocateBuffer(RTNativeWindowBufferInfo *info) {
             return -1;
 
         ret = native_window_dequeue_buffer_and_wait(mNativeWindow.get(), &buf);
-        bufferHandle = buf->handle;
+        if (buf) {
+            bufferHandle = buf->handle;
+        }
+
     }
     if (bufferHandle) {
         Rockchip_get_gralloc_private((UINT32 *)bufferHandle, &priv_hnd);
