@@ -15,6 +15,7 @@ cc_library_shared {
         "sideband/MessageThread.cpp",
         "RTMetadataRetrieverCallback.cpp",
         "RockitMetadataRetriever.cpp",
+        "RockitCodecRegisterInterface.cpp",
     ],
 
     shared_libs: [

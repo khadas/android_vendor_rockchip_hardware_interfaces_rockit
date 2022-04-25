@@ -135,4 +135,120 @@ typedef enum _RTVideoFormat {
     RT_FMT_BUTT            = RT_FMT_RGB_BUTT,
 } RTVideoFormat;
 
+typedef enum {
+     RT_VIDEO_ID_Unused,             /**< Value when coding is N/A */
+     RT_VIDEO_ID_AutoDetect,         /**< Autodetection of coding type */
+     RT_VIDEO_ID_MPEG1VIDEO,
+     RT_VIDEO_ID_MPEG2VIDEO,         /**< AKA: H.262 */
+     RT_VIDEO_ID_H263,               /**< H.263 */
+     RT_VIDEO_ID_MPEG4,              /**< MPEG-4 */
+     RT_VIDEO_ID_WMV,                /**< Windows Media Video (WMV1,WMV2,WMV3)*/
+     RT_VIDEO_ID_RV,                 /**< all versions of Real Video */
+     RT_VIDEO_ID_AVC,                /**< H.264/AVC */
+     RT_VIDEO_ID_MJPEG,              /**< Motion JPEG */
+     RT_VIDEO_ID_VP8,                /**< VP8 */
+     RT_VIDEO_ID_VP9,                /**< VP9 */
+     RT_VIDEO_ID_HEVC,               /**< ITU H.265/HEVC */
+     RT_VIDEO_ID_DolbyVision,        /**< Dolby Vision */
+     RT_VIDEO_ID_ImageHEIC,          /**< HEIF image encoded with HEVC */
+     RT_VIDEO_ID_JPEG,               /**< JPEG */
+     RT_VIDEO_ID_VC1 = 0x01000000,   /**< Windows Media Video (WMV1,WMV2,WMV3)*/
+     RT_VIDEO_ID_FLV1,               /**< Sorenson H.263 */
+     RT_VIDEO_ID_DIVX3,              /**< DIVX3 */
+     RT_VIDEO_ID_VP6,
+     RT_VIDEO_ID_AVSPLUS,            /**< AVS+ profile=0x48 */
+     RT_VIDEO_ID_AVS,                /**< AVS  profile=0x20 */
+     RT_VIDEO_ID_AVS2,               /**< AVS2*/
+     RT_VIDEO_ID_AV1,                /**< AV1 */
+     /* *< Reserved region for introducing Khronos Standard Extensions */
+     RT_VIDEO_ID_KhronosExtensions = 0x2F000000,
+     /* *< Reserved region for introducing Vendor Extensions */
+     RT_VIDEO_ID_VendorStartUnused = 0x3F000000,
+     RT_VIDEO_ID_Max = 0x3FFFFFFF,
+
+     RT_AUDIO_ID_Unused = 0x40000000,  /**< Placeholder value when coding is N/A  */
+     RT_AUDIO_ID_AutoDetect,  /**< auto detection of audio format */
+     RT_AUDIO_ID_PCM_ALAW,    /** <g711a> */
+     RT_AUDIO_ID_PCM_MULAW,   /** <g711u> */
+     RT_AUDIO_ID_PCM_S16LE,   /**< Any variant of PCM_S16LE coding */
+     RT_AUDIO_ID_PCM_S24LE,   /**< Any variant of PCM_S24LE coding */
+     RT_AUDIO_ID_PCM_S32LE,   /**< Any variant of PCM_S32LE coding */
+     RT_AUDIO_ID_ADPCM_G722,         /**< Any variant of ADPCM_G722 encoded data */
+     RT_AUDIO_ID_ADPCM_G726,         /**< Any variant of ADPCM_G726 encoded data */
+     RT_AUDIO_ID_ADPCM_G726LE,       /**< G.726 ADPCM little-endian encoded data*/
+     RT_AUDIO_ID_ADPCM_IMA_QT,       /**< Any variant of ADPCM_IMA encoded data */
+     RT_AUDIO_ID_AMR_NB,      /**< Any variant of AMR_NB encoded data */
+     RT_AUDIO_ID_AMR_WB,      /**< Any variant of AMR_WB encoded data */
+     RT_AUDIO_ID_GSMFR,       /**< Any variant of GSM fullrate (i.e. GSM610) */
+     RT_AUDIO_ID_GSMEFR,      /**< Any variant of GSM Enhanced Fullrate encoded data*/
+     RT_AUDIO_ID_GSMHR,       /**< Any variant of GSM Halfrate encoded data */
+     RT_AUDIO_ID_PDCFR,       /**< Any variant of PDC Fullrate encoded data */
+     RT_AUDIO_ID_PDCEFR,      /**< Any variant of PDC Enhanced Fullrate encoded data */
+     RT_AUDIO_ID_PDCHR,       /**< Any variant of PDC Halfrate encoded data */
+     RT_AUDIO_ID_TDMAFR,      /**< Any variant of TDMA Fullrate encoded data (TIA/EIA-136-420) */
+     RT_AUDIO_ID_TDMAEFR,     /**< Any variant of TDMA Enhanced Fullrate encoded data (TIA/EIA-136-410) */
+     RT_AUDIO_ID_QCELP8,      /**< Any variant of QCELP 8kbps encoded data */
+     RT_AUDIO_ID_QCELP13,     /**< Any variant of QCELP 13kbps encoded data */
+     RT_AUDIO_ID_EVRC,        /**< Any variant of EVRC encoded data */
+     RT_AUDIO_ID_SMV,         /**< Any variant of SMV encoded data */
+     RT_AUDIO_ID_G729,        /**< Any variant of G.729 encoded data */
+     RT_AUDIO_ID_OPUS,        /**< Any variant of OPUS encoded data */
+     RT_AUDIO_ID_AAC,         /**< Any variant of AAC encoded data */
+     RT_AUDIO_ID_MP3,         /**< Any variant of MP3 encoded data */
+     RT_AUDIO_ID_SBC,         /**< Any variant of SBC encoded data */
+     RT_AUDIO_ID_VORBIS,      /**< Any variant of VORBIS encoded data */
+     RT_AUDIO_ID_WMA,         /**< Any variant of WMA encoded data */
+     RT_AUDIO_ID_RA,          /**< Any variant of RA encoded data */
+     RT_AUDIO_ID_MIDI,        /**< Any variant of MIDI encoded data */
+     RT_AUDIO_ID_FLAC,        /**< Any variant of FLAC encoded data */
+     RT_AUDIO_ID_APE = 0x50000000,
+     /**< Reserved region for introducing Khronos Standard Extensions */
+     RT_AUDIO_CodingKhronosExtensions = 0x6F000000,
+     /**< Reserved region for introducing Vendor Extensions */
+     RT_AUDIO_CodingVendorStartUnused = 0x7F000000,
+     RT_AUDIO_ID_WMAV1,
+     RT_AUDIO_ID_WMAV2,
+     RT_AUDIO_ID_WMAPRO,
+     RT_AUDIO_ID_WMALOSSLESS,
+     RT_AUDIO_ID_MP1,
+     RT_AUDIO_ID_MP2,
+     /**< add audio bitstream Codec ID define for RT> */
+     RT_AUDIO_ID_DTS,
+     RT_AUDIO_ID_AC3,
+     RT_AUDIO_ID_EAC3,
+     RT_AUDIO_ID_DOLBY_TRUEHD,
+     RT_AUDIO_ID_MLP,
+     RT_AUDIO_ID_DTS_HD,
+     RT_AUDIO_CodingMax = 0x7FFFFFFF,
+
+     /* subtitle codecs */
+     RT_SUB_ID_Unused = 0x17000,          ///< A dummy ID pointing at the start of subtitle codecs.
+     RT_SUB_ID_DVD,
+     RT_SUB_ID_DVB,
+     RT_SUB_ID_TEXT,  ///< raw UTF-8 text
+     RT_SUB_ID_XSUB,
+     RT_SUB_ID_SSA,
+     RT_SUB_ID_MOV_TEXT,
+     RT_SUB_ID_HDMV_PGS,
+     RT_SUB_ID_DVB_TELETEXT,
+     RT_SUB_ID_SRT,
+
+     RT_SUB_ID_MICRODVD   = 0x17800,
+     RT_SUB_ID_EIA_608,
+     RT_SUB_ID_JACOSUB,
+     RT_SUB_ID_SAMI,
+     RT_SUB_ID_REALTEXT,
+     RT_SUB_ID_STL,
+     RT_SUB_ID_SUBVIEWER1,
+     RT_SUB_ID_SUBVIEWER,
+     RT_SUB_ID_SUBRIP,
+     RT_SUB_ID_WEBVTT,
+     RT_SUB_ID_MPL2,
+     RT_SUB_ID_VPLAYER,
+     RT_SUB_ID_PJS,
+     RT_SUB_ID_ASS,
+     RT_SUB_ID_HDMV_TEXT,
+     RT_SUB_CodingMax
+} RTCodecID;
+
 #endif // ROCKIT_DIRECT_RTLIBDEFINE_H
