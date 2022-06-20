@@ -145,6 +145,8 @@ struct RockitHWParamPairs {
 struct RockitHWBuffer {
     uint32_t     bufferType;
     uint32_t     bufferId;
+    uint32_t     bufferFd;
+    handle       bufferHandle;
     uint32_t     size;
     uint32_t     length;
     RockitHWParamPairs  pair;

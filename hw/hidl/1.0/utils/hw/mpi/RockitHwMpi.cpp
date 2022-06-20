@@ -22,11 +22,9 @@
 #include <utils/Log.h>
 #include "RockitHwMpi.h"
 #include "../include/mpp/rk_mpi.h"
-#include "rt_drm.h"
-#include "drm.h"
-#include "drm_mode.h"
 #include <sys/mman.h>
 #include <utils/Vector.h>
+#include <cutils/native_handle.h>
 
 #include <rockchip/hardware/rockit/hw/1.0/types.h>
 
@@ -57,25 +55,54 @@ enum _MppBufferSite {
 
 typedef struct _MppBufferCtx {
     /* this fd is mpp can use, and only using in this process*/
-    int       mFd;
+    int mFd;
     /* this fd is can use all process */
-    int       mUniqueID;
+    int mUniqueID;
+    /* who own this buffer */
+    int mSite;
     /* mpp buffer, the fd belong to which mpp buffer */
     MppBuffer mMppBuffer;
-    /* who own this buffer */
-    int       mSite;
+    /* native buffer handle */
+    native_handle_t *mHandle;
 } MppBufferCtx;
+
+native_handle_t* getRawHandle(::android::hardware::hidl_handle hidlHandle) {
+    return (native_handle_t*)(buffer_handle_t)hidlHandle;
+}
+
+bool importGraphicBuffer(native_handle_t *inHandle, native_handle_t **outHandle) {
+    native_handle_t *handle;
+
+    handle = native_handle_clone(inHandle);
+    if (handle != NULL) {
+        *outHandle = handle;
+        return true;
+    }
+
+    return false;
+}
+
+bool freeGraphicBuffer(native_handle_t *handle) {
+    if (handle) {
+        native_handle_close(handle);
+        native_handle_delete(handle);
+    }
+
+    return true;
+}
 
 class DataBufferCtx {
 public:
     /* this fd is mpp can use, and only using in this process*/
-    int       mFd;
+    int mFd;
     /* this fd is can use all process */
-    int       mUniqueID;
-    void     *mData;
-    int       mSize;
+    int mUniqueID;
+    void *mData;
+    int mSize;
     /* who own this buffer */
-    int       mSite;
+    int mSite;
+    /* native buffer handle */
+    native_handle_t *mHandle;
 
 public:
     DataBufferCtx();
@@ -111,15 +138,13 @@ DataBufferCtx::DataBufferCtx() {
 
 DataBufferCtx::~DataBufferCtx() {
     if (mData != NULL) {
-        drm_munmap(mData, mSize);
+        munmap(mData, mSize);
         mData = NULL;
     }
-    mSize = 0;
-
-    if (mFd >= 0) {
-        close(mFd);
-        mFd = -1;
+    if (mHandle != NULL) {
+        freeGraphicBuffer(mHandle);
     }
+    mSize = 0;
 }
 
 
@@ -152,8 +177,12 @@ void RockitHwMpi::cleanMppBuffer() {
     if (ctx != NULL) {
         while (ctx->mCommitList != NULL && !ctx->mCommitList->isEmpty()) {
             MppBufferCtx* buffer = ctx->mCommitList->editItemAt(0);
-            if (buffer != NULL)
+            if (buffer != NULL) {
+                if (buffer->mHandle != NULL) {
+                    freeGraphicBuffer(buffer->mHandle);
+                }
                 delete buffer;
+            }
 
             ctx->mCommitList->removeAt(0);
         }
@@ -167,6 +196,9 @@ void RockitHwMpi::cleanMppBuffer(int site) {
         for (int i = ctx->mCommitList->size()-1; i >= 0; i--) {
             MppBufferCtx* buffer = ctx->mCommitList->editItemAt(i);
             if (buffer != NULL && buffer->mSite == site) {
+                if (buffer->mHandle != NULL) {
+                    freeGraphicBuffer(buffer->mHandle);
+                }
                 delete buffer;
                 ctx->mCommitList->removeAt(i);
             }
@@ -200,7 +232,8 @@ void* RockitHwMpi::findDataBuffer(int fd) {
     return NULL;
 }
 
-int RockitHwMpi::addDataBufferList(int uniquefd, int mapfd,void* data, int size) {
+int RockitHwMpi::addDataBufferList(
+        int uniquefd, int mapfd,void* data, int size, native_handle_t *handle) {
     MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
     if (ctx != NULL && ctx->mDataList != NULL) {
         if (ctx->mDataList->size() >= DATABUFFERMAX) {
@@ -214,6 +247,7 @@ int RockitHwMpi::addDataBufferList(int uniquefd, int mapfd,void* data, int size)
         buffer->mUniqueID = uniquefd;
         buffer->mData = data;
         buffer->mSize = size;
+        buffer->mHandle = handle;
         buffer->mSite = BUFFER_SITE_BY_MPI;
         ctx->mDataList->push(buffer);
         return 0;
@@ -272,10 +306,6 @@ RockitHwMpi::RockitHwMpi() {
     mDebug = false;
     mWStride = 0;
     mHStride = 0;
-    mDrmFd = drm_open();
-    if (mDrmFd < 0) {
-        ALOGD("%s %p drm_open fail", __FUNCTION__, this);
-    }
 }
 
 RockitHwMpi::~RockitHwMpi() {
@@ -306,11 +336,6 @@ RockitHwMpi::~RockitHwMpi() {
 
         free(ctx);
         mCtx = NULL;
-    }
-
-    if (mDrmFd >= 0) {
-        drm_close(mDrmFd);
-        mDrmFd = -1;
     }
 }
 
@@ -468,7 +493,7 @@ FAIL:
 
 int RockitHwMpi::enqueue(const RockitHWBuffer& buffer) {
     Mutex::Autolock autoLock(mLock);
-    if (mCtx == NULL || mDrmFd < 0) {
+    if (mCtx == NULL) {
         return -1;
     }
 
@@ -485,13 +510,12 @@ int RockitHwMpi::enqueue(const RockitHWBuffer& buffer) {
     uint32_t    flags       = 0;
     uint64_t    pts         = 0ll;
     uint64_t    dts         = 0ll;
-    uint32_t    length      = buffer.length;
     int         fd          = -1;
     void*       data        = NULL;
     const RockitHWParamPairs& pairs = buffer.pair;
+    uint32_t    size        = buffer.size;
+    uint32_t    length      = buffer.length;
 
-    uint32_t handle = 0;
-    int size = 0;
 
     flags  = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_FLAGS);
     pts = getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_PTS);
@@ -504,20 +528,28 @@ int RockitHwMpi::enqueue(const RockitHWBuffer& buffer) {
     if (!eos) {
         DataBufferCtx* bufferCtx = (DataBufferCtx*)findDataBuffer((int)buffer.bufferId);
         if (bufferCtx == NULL) {
-            ret = drm_get_info_from_name(mDrmFd, (int)buffer.bufferId, &handle, &size);
-            if (ret < 0) {
-                ALOGE("%s: drm_get_info_from_name fail", __FUNCTION__);
+            native_handle_t *handle;
+            void *tmpPtr = NULL;
+
+            if (!importGraphicBuffer(getRawHandle(buffer.bufferHandle), &handle)) {
+                ALOGE("failed to import input buffer.");
                 ret = -1;
                 goto EXIT;
             }
-            ret = drm_map(mDrmFd, handle, (uint32_t)size, PROT_READ | PROT_WRITE,
-                    MAP_SHARED, 0, &data, &fd, 0);
-            if (ret < 0) {
-                ALOGE("%s: drm_map fail", __FUNCTION__);
+
+            fd = handle->data[0];
+            size = buffer.size;
+
+            tmpPtr = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+            if (tmpPtr == NULL) {
+                ALOGE("failed to mmap input buffer.");
                 ret = -1;
                 goto EXIT;
             }
-            ret = addDataBufferList(buffer.bufferId, fd, data, size);
+
+            data = tmpPtr;
+
+            ret = addDataBufferList(buffer.bufferId, fd, data, size, handle);
             if (ret < 0) {
                 ret = -1;
                 goto EXIT;
@@ -554,22 +586,10 @@ int RockitHwMpi::enqueue(const RockitHWBuffer& buffer) {
     if (MPP_OK != err) {
         ret = -1;
     }
-    // fd and data alread record in mDataList;
-    data = NULL;
-    fd = -1;
+
 EXIT:
     if (pkt != NULL) {
         mpp_packet_deinit(&pkt);
-    }
-
-    if (data != NULL) {
-        drm_munmap(data, size);
-        data = NULL;
-    }
-
-    if(fd >= 0) {
-        close(fd);
-        fd = -1;
     }
 
     return ret;
@@ -578,7 +598,7 @@ EXIT:
 int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
     Mutex::Autolock autoLock(mLock);
     MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
-    if ((ctx == NULL) || (mDrmFd < 0)) {
+    if (ctx == NULL) {
         ALOGE("%s ctx = NULL", __FUNCTION__);
         return -1;
     }
@@ -716,48 +736,36 @@ __FAILED:
 int RockitHwMpi::commitBuffer(const RockitHWBuffer& buffer) {
     Mutex::Autolock autoLock(mLock);
     MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
-    if ((ctx == NULL) || (mDrmFd < 0)) {
+    if (ctx == NULL) {
         ALOGE("%s ctx = NULL", __FUNCTION__);
         return -1;
     }
 
+    int ret = 0;
     MppBufferInfo info;
     MppBuffer mppBuffer = NULL;
-    uint32_t handle = -1;
-    int map_fd = -1;
-    int size = 0;
-    int ret = 0;
     MppBufferCtx* bufferCtx = NULL;
+    native_handle_t *handle;
+
+    if (!importGraphicBuffer(getRawHandle(buffer.bufferHandle), &handle)) {
+        ALOGE("failed to import output buffer");
+        ret = -1;
+        goto __FAILED;
+    }
 
     memset(&info, 0, sizeof(MppBufferInfo));
-    /* convert buffer's name to handle */
-    int err = drm_get_info_from_name(mDrmFd, buffer.bufferId, &handle, &size);
-    if (err) {
-        ALOGE("%s: failed to drm_get_info_from_name(...)! err: 0x%x",
-            __FUNCTION__, err);
-        ret = -1;
-        goto __FAILED;
-    }
-    /* convert buffer's handle to fd */
-    err = drm_handle_to_fd(mDrmFd, handle, &map_fd, 0);
-    if (err) {
-        ALOGE("%s: failed to drm_handle_to_fd(...)! err: 0x%x",
-            __FUNCTION__, err);
-        ret = -1;
-        goto __FAILED;
-    }
 
     info.type = MPP_BUFFER_TYPE_ION;
-    info.fd = map_fd;
+    info.fd = handle->data[0];
     info.ptr = NULL;
     info.hnd = NULL;
-    info.size = size;
+    info.size = buffer.size;
     info.index = buffer.bufferId;
 
     mpp_buffer_import_with_tag(ctx->frm_grp, &info, &mppBuffer, "Rockit-Mpp-Group", __FUNCTION__);
     if (mDebug) {
-        ALOGE("%s: this = %p, fd = %d, map_fd = %d, mUniqueID = %d, size = %d, mppBuffer = %p",
-            __FUNCTION__, this, info.fd, map_fd, buffer.bufferId, (int)info.size, mppBuffer);
+        ALOGE("%s: this = %p, fd = %d, mUniqueID = %d, size = %d, mppBuffer = %p",
+            __FUNCTION__, this, info.fd, buffer.bufferId, (int)info.size, mppBuffer);
     }
 
     bufferCtx = (MppBufferCtx*)findMppBuffer(buffer.bufferId);
@@ -767,6 +775,7 @@ int RockitHwMpi::commitBuffer(const RockitHWBuffer& buffer) {
         bufferCtx->mUniqueID = buffer.bufferId;
         bufferCtx->mMppBuffer = mppBuffer;
         bufferCtx->mSite = BUFFER_SITE_BY_MPI;
+        bufferCtx->mHandle = handle;
         ctx->mCommitList->push(bufferCtx);
 
         if (ctx->mCommitList->size() >= COMMITBUFFERMAX) {
@@ -781,22 +790,6 @@ int RockitHwMpi::commitBuffer(const RockitHWBuffer& buffer) {
     }
 
 __FAILED:
-    /*
-     * Must close the fd and handle here.
-     * mpp will dup info.fd itself(info.fd->info.hnd->info.fd),
-     * so the info.fd which pass to it is not be used, it will
-     * leak if not closed here.
-     */
-    if (map_fd >= 0) {
-        close(map_fd);
-    }
-
-    if (handle >= 0) {
-        int err = drm_free(mDrmFd, handle);
-        if (err) {
-            ALOGE("failed to drm_free(dev=%d, fd=%03d)", mDrmFd, handle);
-        }
-    }
     return ret;
 }
 

@@ -5,7 +5,6 @@ cc_library {
 
     srcs: [
         "RTUtils.cpp",
-        "rt_drm.cpp",
         "RockitHwManager.cpp",
         "RockitHwService.cpp",
         "RockitHwInterface.cpp",

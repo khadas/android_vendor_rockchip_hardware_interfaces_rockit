@@ -47,7 +47,6 @@ protected:
     static void HwBuffer2RTBuffer (const RockitHWBuffer& hw, RTHWBuffer* rt);
     static void RTHWParam2RockitHWParam(RockitHWParamPairs& hw, RTHWParamPairs* rt);
     static void RockitHWParam2RTHWParam(const RockitHWParamPairs& hw, RTHWParamPairs& rt);
-    static void copyRockitHWParam(const RockitHWBuffer& src, RockitHWBuffer& dst);
     virtual void initRTHWBuffer(RTHWBuffer* rt);
 
 protected:

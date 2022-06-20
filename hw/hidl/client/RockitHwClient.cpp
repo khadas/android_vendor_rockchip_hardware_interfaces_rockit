@@ -103,6 +103,9 @@ int RockitHwClient::enqueue(RTHWBuffer& buffer) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RTBuffer2HwBuffer(buffer, hwBuffer);
+        RockitBufferHandle handle(buffer.bufferFd, buffer.size);
+        hwBuffer.bufferHandle = (native_handle_t*)&handle;
+
         status = ctx->mService->enqueue(hwBuffer);
     }
     return status2Int(status);
@@ -135,6 +138,9 @@ int RockitHwClient::commitBuffer(RTHWBuffer& buffer) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RTBuffer2HwBuffer(buffer, hwBuffer);
+        RockitBufferHandle handle(buffer.bufferFd, buffer.size);
+        hwBuffer.bufferHandle = (native_handle_t*)&handle;
+
         status = ctx->mService->commitBuffer(hwBuffer);
     }
 
@@ -221,6 +227,7 @@ void RockitHwClient::initRTHWBuffer(RTHWBuffer* rt) {
 void RockitHwClient::RTBuffer2HwBuffer(RTHWBuffer& rt, RockitHWBuffer& hw) {
     hw.bufferType = rt.bufferType;
     hw.bufferId = rt.bufferId;
+    hw.bufferFd = rt.bufferFd;
     hw.size = rt.size;
     hw.length = rt.length;
 
@@ -231,26 +238,11 @@ void RockitHwClient::HwBuffer2RTBuffer (const RockitHWBuffer& hw, RTHWBuffer* rt
     if (rt != NULL) {
         rt->bufferType = hw.bufferType;
         rt->bufferId = hw.bufferId;
+        rt->bufferFd = hw.bufferFd;
         rt->size = hw.size;
         rt->length = hw.length;
 
         RockitHWParam2RTHWParam(hw.pair, rt->pair);
-    }
-}
-
-void RockitHwClient::copyRockitHWParam(const RockitHWBuffer& src, RockitHWBuffer& dst) {
-    dst.bufferType = src.bufferType;
-    dst.bufferId = src.bufferId;
-    dst.size = src.size;
-    dst.length = src.length;
-    dst.pair.counter = dst.pair.counter;
-
-    if (dst.pair.counter > 0) {
-        dst.pair.pairs.resize(dst.pair.counter);
-        for (int i = 0; i < dst.pair.counter; i++) {
-            dst.pair.pairs[i].key = src.pair.pairs[i].key;
-            dst.pair.pairs[i].value = src.pair.pairs[i].value;
-        }
     }
 }
 
@@ -288,9 +280,5 @@ void RockitHwClient::RockitHWParam2RTHWParam(const RockitHWParamPairs& hw, RTHWP
         }
     }
 }
-
-
-
-
 
 }  // namespace android

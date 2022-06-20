@@ -19,6 +19,30 @@
 
 #include <sys/types.h>
 
+typedef struct base_handle {
+    int version;        /* sizeof(native_handle_t) */
+    int numFds;         /* number of file-descriptors at &data[0] */
+    int numInts;        /* number of ints at &data[numFds] */
+    int data[0];        /* numFds + numInts ints */
+} base_handle_t;
+
+struct RockitBufferHandle {
+    base_handle baseHandle;
+
+    int shareFd;
+    int size;
+
+    RockitBufferHandle(int inFd, int inSize) {
+        baseHandle.version = sizeof(native_handle);
+        baseHandle.numFds = 1;
+        baseHandle.numInts =
+            ((sizeof(RockitBufferHandle) - sizeof(native_handle)) / sizeof(int) - 1);
+
+        shareFd = inFd;
+        size = inSize;
+    }
+};
+
 enum RTHWType {
     HW_TYPE_UNKNOWN = -1,
     HW_DECODER_MPI = 1,
@@ -58,6 +82,8 @@ struct RTHWParamPairs {
 struct RTHWBuffer {
     uint32_t        bufferType;
     uint32_t        bufferId;
+    uint32_t        bufferFd;
+    void           *bufferHandle;
     uint32_t        size;
     uint32_t        length;
     RTHWParamPairs  pair;

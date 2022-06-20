@@ -51,14 +51,15 @@ protected:
     virtual void cleanMppBuffer(int site);
     virtual void dumpMppBufferList();
     virtual int bufferReady();
-    virtual int addDataBufferList(int fd, int mapfd, void* data, int size);
+    virtual int addDataBufferList(
+            int fd, int mapfd, void* data, int size, native_handle_t *handle);
     virtual void freeDataBufferList();
     virtual void freeDataBuffer(int idx);
+
 protected:
     void* mCtx;
     void* mInput;
     void* mOutput;
-    int   mDrmFd;
     int   mWStride;
     int   mHStride;
     bool  mDebug;

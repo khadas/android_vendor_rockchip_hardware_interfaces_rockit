@@ -18,18 +18,15 @@
 #ifndef ROCKIT_DIRECT_RTSURFACECALLBACK_H_
 #define ROCKIT_DIRECT_RTSURFACECALLBACK_H_
 
-#include <sys/types.h>
-#include <inttypes.h>
 #include <utils/RefBase.h>
 #include <gui/Surface.h>
-#include <system/window.h>
 
 #include "RTSurfaceInterface.h"
 
 namespace android {
 
-class RockitPlayer;
 class RTSidebandWindow;
+
 class RTSurfaceCallback : public RTSurfaceInterface {
  public:
     RTSurfaceCallback(const sp<IGraphicBufferProducer> &bufferProducer);
@@ -62,7 +59,6 @@ class RTSurfaceCallback : public RTSurfaceInterface {
     virtual INT32 setNativeWindow(const sp<IGraphicBufferProducer> &bufferProducer);
 
  private:
-    INT32                   mDrmFd;
     INT32                   mTunnel;
     buffer_handle_t         mSidebandHandle;
     sp<RTSidebandWindow>    mSidebandWindow;
