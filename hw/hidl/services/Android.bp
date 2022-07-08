@@ -12,7 +12,7 @@ cc_binary {
     vintf_fragments: ["rockchip.hardware.rockit.hw@1.0-service.xml"],
     shared_libs: [
         "rockchip.hardware.rockit.hw@1.0",
-        "libavservices_minijail_vendor",
+        "libavservices_minijail",
         "libbinder",
         "librockit_hw_hidl@1.0",
         "libhidlbase",
