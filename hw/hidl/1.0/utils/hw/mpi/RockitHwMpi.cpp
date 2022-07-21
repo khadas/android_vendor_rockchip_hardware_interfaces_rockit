@@ -178,6 +178,12 @@ void RockitHwMpi::cleanMppBuffer() {
         while (ctx->mCommitList != NULL && !ctx->mCommitList->isEmpty()) {
             MppBufferCtx* buffer = ctx->mCommitList->editItemAt(0);
             if (buffer != NULL) {
+                if (buffer->mSite == BUFFER_SITE_BY_ROCKIT) {
+                    if (buffer->mMppBuffer != NULL) {
+                        mpp_buffer_put(buffer->mMppBuffer);
+                    }
+                }
+
                 if (buffer->mHandle != NULL) {
                     freeGraphicBuffer(buffer->mHandle);
                 }
@@ -875,7 +881,7 @@ int RockitHwMpi::control(int cmd, const RockitHWParamPairs& param) {
                 dumpMppBufferList();
             }
             freeDataBufferList();
-            cleanMppBuffer(BUFFER_SITE_BY_MPI);
+            cleanMppBuffer();
             mpp_buffer_group_clear(ctx->frm_grp);
             break;
         case RockitHWCtrCmd::HW_CMD_BUFFER_READY:

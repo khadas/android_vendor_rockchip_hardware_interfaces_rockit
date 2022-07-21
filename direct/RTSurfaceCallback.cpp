@@ -107,8 +107,9 @@ INT32 RTSurfaceCallback::allocateBuffer(RTNativeWindowBufferInfo *info) {
         } else {
             info->windowBuf = (void *)buf;
         }
-        // use shareFd for UniqueID
-        info->name = privHandle.share_fd;
+
+        // use buffer_handle binder
+        info->name = 0xFFFFFFFE;
         info->size = privHandle.size;
         info->dupFd = privHandle.share_fd;
     }

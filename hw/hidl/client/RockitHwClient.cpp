@@ -103,7 +103,7 @@ int RockitHwClient::enqueue(RTHWBuffer& buffer) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RTBuffer2HwBuffer(buffer, hwBuffer);
-        RockitBufferHandle handle(buffer.bufferFd, buffer.size);
+        RockitBufferHandle handle(buffer.bufferId, buffer.size);
         hwBuffer.bufferHandle = (native_handle_t*)&handle;
 
         status = ctx->mService->enqueue(hwBuffer);
@@ -138,7 +138,7 @@ int RockitHwClient::commitBuffer(RTHWBuffer& buffer) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RTBuffer2HwBuffer(buffer, hwBuffer);
-        RockitBufferHandle handle(buffer.bufferFd, buffer.size);
+        RockitBufferHandle handle(buffer.bufferId, buffer.size);
         hwBuffer.bufferHandle = (native_handle_t*)&handle;
 
         status = ctx->mService->commitBuffer(hwBuffer);
@@ -227,7 +227,6 @@ void RockitHwClient::initRTHWBuffer(RTHWBuffer* rt) {
 void RockitHwClient::RTBuffer2HwBuffer(RTHWBuffer& rt, RockitHWBuffer& hw) {
     hw.bufferType = rt.bufferType;
     hw.bufferId = rt.bufferId;
-    hw.bufferFd = rt.bufferFd;
     hw.size = rt.size;
     hw.length = rt.length;
 
@@ -238,7 +237,6 @@ void RockitHwClient::HwBuffer2RTBuffer (const RockitHWBuffer& hw, RTHWBuffer* rt
     if (rt != NULL) {
         rt->bufferType = hw.bufferType;
         rt->bufferId = hw.bufferId;
-        rt->bufferFd = hw.bufferFd;
         rt->size = hw.size;
         rt->length = hw.length;
 
