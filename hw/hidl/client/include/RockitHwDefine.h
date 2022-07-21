@@ -82,8 +82,6 @@ struct RTHWParamPairs {
 struct RTHWBuffer {
     uint32_t        bufferType;
     uint32_t        bufferId;
-    uint32_t        bufferFd;
-    void           *bufferHandle;
     uint32_t        size;
     uint32_t        length;
     RTHWParamPairs  pair;
