@@ -56,6 +56,7 @@ struct MetaDataCallBackCtx {
     // rotation of input video frame
     int mRotation;
 
+    int mBitDepth;
     std::vector<sp<IMemory> > mFrames;
 };
 
@@ -137,7 +138,7 @@ int RTMetadataRetrieverCallback::init(RtMetaData* meta) {
     int displayWidth = 0, displayHeight = 0;
     int format = 0, rotation = 0;
     int dstFormat = 0;
-
+    int bitDepth = 0;
     // stride of width and height
     if (!meta->findInt32(kKeyFrameW, &width)) {
         ALOGD("%s not find width stride in meta", __FUNCTION__);
@@ -169,6 +170,11 @@ int RTMetadataRetrieverCallback::init(RtMetaData* meta) {
         ALOGD("%s not find src format in meta, use RGB56 for default", __FUNCTION__);
     }
 
+    if (!meta->findInt32(kKeyVSettingBitdepth, &bitDepth)) {
+        bitDepth = 8;
+        ALOGD("%s not find bitDepth in meta, use 8 for default", __FUNCTION__);
+    }
+
     uint32_t bpp = 2; /*rgb565 -  2bytes*/
     if (dstFormat == OMX_COLOR_Format16bitRGB565) {
         bpp = 2;
@@ -184,7 +190,7 @@ int RTMetadataRetrieverCallback::init(RtMetaData* meta) {
     ctx->mDstFormat = dstFormat;
     ctx->mBpp = bpp;
     ctx->mRotation = rotation;
-
+    ctx->mBitDepth = bitDepth;
     rtFormatDump(ctx->mSrcFormat);
     omxFormatDump(ctx->mDstFormat);
     Debug("%s: Stride(%d x %d), Video(%d x %d), bpp = %d, rotation = %d",
@@ -321,12 +327,12 @@ sp<IMemory> RTMetadataRetrieverCallback::allocVideoFrame(RtMetaData* meta) {
     int height = ctx->mHeight;
     int bpp = ctx->mBpp;
     int rotation = ctx->mRotation;
-
+    int bitDepth = ctx->mBitDepth;
     uint32_t tileWidth = 0;
     uint32_t tileHeight = 0;
-
+    //ALOGE("file: %s func %s line %d bitDepth %d",__FILE__,__FUNCTION__,__LINE__,bitDepth);
     VideoFrame frame(width, height, displayWidth, displayHeight,
-            tileWidth, tileHeight, rotation, bpp, true/*hasData*/, 0/*iccSize*/);
+            tileWidth, tileHeight, rotation, bpp, bitDepth, true/*hasData*/, 0/*iccSize*/);
 
     size_t size = frame.getFlattenedSize();
     sp<MemoryHeapBase> heap = new MemoryHeapBase(size, 0, "RTMetadataRetrieverClient");

@@ -65,7 +65,8 @@ void GraphicWindowApi::SetSurfaceLayer(const sp<SurfaceControl>& sc, Transaction
     t->setLayer(sc, z);
 }
 
-void GraphicWindowApi::SetSurfaceLayerStack(const sp<SurfaceControl>& sc, Transaction *t, uint32_t layerStack) {
+void GraphicWindowApi::SetSurfaceLayerStack(const sp<SurfaceControl>& sc, Transaction *t, uint32_t layerStackId) {
+    ui::LayerStack layerStack = ui::LayerStack::fromValue(layerStackId);
     t->setLayerStack(sc, layerStack);
 }
 

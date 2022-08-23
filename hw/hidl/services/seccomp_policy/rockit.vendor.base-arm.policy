@@ -78,6 +78,6 @@ node_bind: 1
 name_bind: 1
 connect: 1
 search: 1
-
+sysinfo: 1
 @include /system/etc/seccomp_policy/crash_dump.arm.policy
 

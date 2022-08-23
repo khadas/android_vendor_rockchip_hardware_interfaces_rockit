@@ -43,7 +43,7 @@ public:
     static void                     SetSurfacePosition(const sp<SurfaceControl>& sc, Transaction *t, float x, float y);
     static void                     SetSurfaceSize(const sp<SurfaceControl>& sc, Transaction *t, uint32_t w, uint32_t h);
     static void                     SetSurfaceLayer(const sp<SurfaceControl>& sc, Transaction *t, int32_t z);
-    static void                     SetSurfaceLayerStack(const sp<SurfaceControl>& sc, Transaction *t, uint32_t layerStack);
+    static void                     SetSurfaceLayerStack(const sp<SurfaceControl>& sc, Transaction *t, uint32_t layerStackId);
     static void                     ShowSurface(const sp<SurfaceControl>& sc, Transaction *t);
     static void                     HideSurface(const sp<SurfaceControl>& sc, Transaction *t);
     static void                     CloseSurfaceTransaction(Transaction *t);
