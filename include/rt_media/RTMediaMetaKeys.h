@@ -144,6 +144,7 @@ enum {
     kKeyVSettingBitdepth       = MKTAG('v', 's', 'b', 'h'),  // INT32
     kKeyVSettingHdr            = MKTAG('v', 's', 'h', 'r'),  // INT32
     kKeyVSettingCodecPtr       = MKTAG('v', 's', 'c', 't'),  // void *
+    kKeyVSettingBufferIpcMode  = MKTAG('v', 's', 'b', 'i'),  // INT32
 
     /* tracks infor for cache features*/
     kKeyTrackNum               = MKTAG('t', 'n', 'u', 'm'),  // INT32 the default number of tracks
