@@ -936,6 +936,11 @@ int RockitHwMpi::query(int cmd, RockitHWParamPairs& out) {
                 }
                 setValue(out, (uint32_t)RockitHWParamKey::HW_KEY_TOKEN, (uint64_t)number);
             } break;
+        case RockitHWQueryCmd::KEY_HW_QUERY_BUF_HDL_IPC: {
+                out.pairs.resize(1);
+                out.counter = 0;
+                setValue(out, (uint32_t)RockitHWParamKey::HW_KEY_BUF_HDL_IPC, 1);
+            } break;
         default:
             ALOGD("%s: cmd = %d not support, add codes here", __FUNCTION__, event);
             result = -1;
