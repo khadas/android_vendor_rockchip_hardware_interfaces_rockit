@@ -73,7 +73,7 @@ static RT_RET deinitRegisterCodecCtxOpts() {
 
     gRegisterRefNum--;
     if (gRegisterRefNum > 0) {
-        return ret;
+        return RT_OK;
     }
     if (libHandler) {
         ret = dlclose(libHandler);
