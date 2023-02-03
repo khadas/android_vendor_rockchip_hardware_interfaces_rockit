@@ -360,6 +360,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     uint32_t            fastMode = 0;
     uint32_t            fbcOutput = 0;
     uint32_t            timeMode = 0;
+    uint32_t            hdrMetaEn = 0;
     uint32_t            debug = 0;
 
     Mutex::Autolock autoLock(mLock);
@@ -385,6 +386,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     fastMode = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_FASTMODE);
     fbcOutput = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_FBC_OUTPUT);
     timeMode = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_PRESENT_TIME_ORDER);
+    hdrMetaEn = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_HDR_META_EN);
     debug  = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_DEBUG);
 
     if (debug > 0) {
@@ -426,7 +428,6 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
 
         if (fbcOutput) {
             ALOGD("use mpp fbc output mode");
-            uint32_t MPP_FRAME_FBC_AFBC_V2 = 0x00200000;
             mppFormat |= MPP_FRAME_FBC_AFBC_V2;
         }
         mpp_mpi->control(mpp_ctx, MPP_DEC_SET_OUTPUT_FORMAT, (MppParam)&mppFormat);
@@ -472,6 +473,12 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     ctx->mpp_ctx = mpp_ctx;
     ctx->mpp_mpi = mpp_mpi;
     ctx->frm_grp = frm_grp;
+    mCtx = (void*)ctx;
+
+    if (hdrMetaEn) {
+        ALOGD("enable hdr meta");
+        enableHdrMeta(1);
+    }
 
     mpp_buffer_group_clear(ctx->frm_grp);
 
@@ -480,7 +487,6 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     assert(ctx->mCommitList != NULL);
     assert(ctx->mDataList != NULL);
 
-    mCtx = (void*)ctx;
     return 0;
 
 FAIL:
@@ -616,6 +622,8 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
     MppBufferGroup          frm_grp;
     MppBuffer               buffer = NULL;
     RockitHWParamPairs&     param = hwBuffer.pair;
+    RK_S32                  hdrMetaOffset = 0;
+    RK_S32                  hdrMetaSize = 0;
     bool isI4O2 = false;
     int  ret = 0;
     int  eos = 0;
@@ -689,6 +697,19 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
         setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_DTS,
             (uint64_t)mpp_frame_get_dts(mpp_frame));
 
+        if (mpp_frame_has_meta(mpp_frame) && MPP_FRAME_FMT_IS_HDR(mpp_frame_get_fmt(mpp_frame))) {
+            MppMeta meta = mpp_frame_get_meta(mpp_frame);
+
+            mpp_meta_get_s32(meta, KEY_HDR_META_OFFSET, &hdrMetaOffset);
+            mpp_meta_get_s32(meta, KEY_HDR_META_SIZE, &hdrMetaSize);
+            if (hdrMetaOffset && hdrMetaSize) {
+                setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_HDR_META_OFFSET,
+                         (uint64_t)hdrMetaOffset);
+                setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_HDR_META_SIZE,
+                         (uint64_t)hdrMetaSize);
+            }
+        }
+
         if (mpp_frame_get_errinfo(mpp_frame) || mpp_frame_get_discard(mpp_frame)) {
             flags |= (uint32_t)RockitHWBufferFlags::HW_FLAGS_ERROR_INFOR;
         }
@@ -712,8 +733,8 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
 
         if (mDebug) {
            ALOGD("%s: this = %p, mUniqueID = %d, fd = %d, mppBuffer = %p, mpp_frame = %p,frame width: %d frame height: %d width: %d height %d "
-                                  "pts %lld dts %lld Err %d EOS %d Infochange %d isI4O2: %d flags: %lld",
-                                  __FUNCTION__, this, hwBuffer.bufferId, 
+                                  "pts %lld dts %lld hdrMetaOffset %d Err %d EOS %d Infochange %d isI4O2: %d flags: %lld",
+                                  __FUNCTION__, this, hwBuffer.bufferId,
                                   fd, buffer, mpp_frame,
                                   mpp_frame_get_hor_stride(mpp_frame),
                                   mpp_frame_get_ver_stride(mpp_frame),
@@ -721,6 +742,7 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
                                   mpp_frame_get_height(mpp_frame),
                                   mpp_frame_get_pts(mpp_frame),
                                   mpp_frame_get_dts(mpp_frame),
+                                  hdrMetaOffset,
                                   mpp_frame_get_errinfo(mpp_frame),
                                   eos, infochange, isI4O2,
                                   (long long)flags);
@@ -964,6 +986,26 @@ int RockitHwMpi::bufferReady() {
     if ((mpp_ctx != NULL) && (mpp_ctx != NULL) && (frm_grp != NULL)) {
         mpp_mpi->control(mpp_ctx, MPP_DEC_SET_EXT_BUF_GROUP, frm_grp);
         mpp_mpi->control(mpp_ctx, MPP_DEC_SET_INFO_CHANGE_READY, NULL);
+    } else {
+        ret = -1;
+    }
+
+    return ret;
+}
+
+int RockitHwMpi::enableHdrMeta(int enable) {
+    int ret = 0;
+    MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
+    MppCtx mpp_ctx         = ctx->mpp_ctx;
+    MppApi *mpp_mpi        = ctx->mpp_mpi;
+
+    if ((mpp_ctx != NULL) && (mpp_ctx != NULL)) {
+        MppDecCfg cfg;
+        mpp_dec_cfg_init(&cfg);
+        mpp_mpi->control(mpp_ctx, MPP_DEC_GET_CFG, cfg);
+        mpp_dec_cfg_set_u32(cfg, "base:enable_hdr_meta", enable);
+        mpp_mpi->control(mpp_ctx, MPP_DEC_SET_CFG, cfg);
+        mpp_dec_cfg_deinit(cfg);
     } else {
         ret = -1;
     }

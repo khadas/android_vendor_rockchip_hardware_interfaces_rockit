@@ -50,6 +50,21 @@ typedef struct RT_SIDEBAND_INFO {
     INT32 transform;
 } RTSidebandInfo;
 
+typedef struct RT_HDR_META {
+    void *buf;
+    INT32 offset;
+} RTHdrMeta;
+
+enum RT_SURFACE_CMD {
+    RT_SURFACE_QUERY_MIN_UNDEQUEUED_BUFFERS    = 3,
+
+    // SET CMD
+    RT_SURFACE_CMD_SET_HDR_META                = 0x1000,  // param RTHdrMeta
+
+    // GET CMD
+    RT_SURFACE_CMD_GET_HDR_META                = 0x2000,  // param RTHdrMeta
+};
+
 class RTSurfaceInterface {
  public:
     virtual ~RTSurfaceInterface() {}

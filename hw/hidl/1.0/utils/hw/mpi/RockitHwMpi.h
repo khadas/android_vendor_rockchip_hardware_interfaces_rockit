@@ -56,6 +56,9 @@ protected:
     virtual void freeDataBufferList();
     virtual void freeDataBuffer(int idx);
 
+private:
+    int enableHdrMeta(int enable);
+
 protected:
     void* mCtx;
     void* mInput;

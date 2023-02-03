@@ -24,6 +24,7 @@
 #include "RTSurfaceCallback.h"
 #include "RockitPlayer.h"
 #include "sideband/RTSidebandWindow.h"
+#include "RTVdecExtendFeature.h"
 
 using namespace ::android;
 
@@ -356,11 +357,37 @@ INT32 RTSurfaceCallback::setSidebandStream(RTSidebandInfo info) {
 
 INT32 RTSurfaceCallback::query(INT32 cmd, INT32 *param) {
     ALOGV("%s %d in", __FUNCTION__, __LINE__);
-    if (getNativeWindow() == NULL)
-        return -1;
+    INT32 ret = RT_OK;
 
-    return mNativeWindow->query(mNativeWindow.get(), cmd, param);
+    switch (cmd) {
+      case RT_SURFACE_QUERY_MIN_UNDEQUEUED_BUFFERS : {
+        if (getNativeWindow() == NULL)
+            return -1;
 
+        ret = mNativeWindow->query(mNativeWindow.get(), cmd, param);
+      } break;
+      case RT_SURFACE_CMD_SET_HDR_META : {
+        RTHdrMeta *hdrMeta = (RTHdrMeta *)param;
+        int64_t offset = (int64_t)hdrMeta->offset;
+        buffer_handle_t handle;
+
+        if (mTunnel) {
+            handle = (buffer_handle_t)hdrMeta->buf;
+        } else {
+            handle = ((ANativeWindowBuffer *)hdrMeta->buf)->handle;
+        }
+
+        ret = RTVdecExtendFeature::configFrameHdrDynamicMeta(handle, offset);
+      } break;
+      case RT_SURFACE_CMD_GET_HDR_META : {
+
+      } break;
+      default : {
+        ret = RT_ERR_UNSUPPORT;
+      } break;
+    }
+
+    return ret;
 }
 
 void* RTSurfaceCallback::getNativeWindow() {
