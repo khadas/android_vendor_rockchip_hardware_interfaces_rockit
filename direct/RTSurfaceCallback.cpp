@@ -23,29 +23,30 @@
 
 #include "RTSurfaceCallback.h"
 #include "RockitPlayer.h"
-#include "sideband/RTSidebandWindow.h"
+
+#include "video_tunnel_win.h"
 #include "RTVdecExtendFeature.h"
 
 using namespace ::android;
 
 RTSurfaceCallback::RTSurfaceCallback(const sp<IGraphicBufferProducer> &bufferProducer)
-    : mTunnel(0),
-      mSidebandHandle(NULL),
-      mSidebandWindow(NULL) {
+    : mSidebandHandle(NULL),
+      mSidebandWin(NULL) {
     mNativeWindow = new Surface(bufferProducer, true);
 }
 
 RTSurfaceCallback::~RTSurfaceCallback() {
     ALOGD("~RTSurfaceCallback(%p) construct", this);
     if (mSidebandHandle) {
-        mSidebandWindow->freeBuffer(&mSidebandHandle);
+        native_handle_delete((native_handle_t *)mSidebandHandle);
+        mSidebandHandle = NULL;
     }
-    if (mSidebandWindow.get()) {
-        mSidebandWindow->release();
-        mSidebandWindow.clear();
+    if (mSidebandWin != NULL) {
+        rk_vt_win_destroy(&mSidebandWin);
     }
 
     if (mNativeWindow.get() != NULL) {
+        native_window_set_sideband_stream(mNativeWindow.get(), NULL);
         mNativeWindow.clear();
     }
 }
@@ -85,10 +86,14 @@ INT32 RTSurfaceCallback::allocateBuffer(RTNativeWindowBufferInfo *info) {
     buffer_handle_t             bufferHandle = NULL;
     gralloc_private_handle_t    privHandle;
     ANativeWindowBuffer        *buf = NULL;
+    vt_buffer_t                *vtBuf = NULL;
 
     memset(info, 0, sizeof(RTNativeWindowBufferInfo));
-    if (mTunnel) {
-        mSidebandWindow->allocateBuffer((buffer_handle_t *)&bufferHandle);
+    if (mSidebandWin != NULL) {
+        ret = rk_vt_win_dequeueBufferAndWait(mSidebandWin, &vtBuf);
+        if (vtBuf) {
+            bufferHandle = vtBuf->handle;
+        }
     } else {
         if (getNativeWindow() == NULL)
             return -1;
@@ -103,8 +108,8 @@ INT32 RTSurfaceCallback::allocateBuffer(RTNativeWindowBufferInfo *info) {
     if (bufferHandle) {
         Rockchip_get_gralloc_private((UINT32 *)bufferHandle, &privHandle);
 
-        if (mTunnel) {
-            info->windowBuf = (void *)bufferHandle;
+        if (mSidebandWin != NULL) {
+            info->windowBuf = (void *)vtBuf;
         } else {
             info->windowBuf = (void *)buf;
         }
@@ -121,8 +126,8 @@ INT32 RTSurfaceCallback::allocateBuffer(RTNativeWindowBufferInfo *info) {
 INT32 RTSurfaceCallback::freeBuffer(void *buf, INT32 fence) {
     ALOGV("%s %d buf=%p in", __FUNCTION__, __LINE__, buf);
     INT32 ret = 0;
-    if (mTunnel) {
-        ret = mSidebandWindow->freeBuffer((buffer_handle_t *)&buf);
+    if (mSidebandWin != NULL) {
+        ret = rk_vt_win_cancelBuffer(mSidebandWin, (vt_buffer_t *)buf);
     } else {
         if (getNativeWindow() == NULL)
             return -1;
@@ -136,8 +141,8 @@ INT32 RTSurfaceCallback::freeBuffer(void *buf, INT32 fence) {
 INT32 RTSurfaceCallback::remainBuffer(void *buf, INT32 fence) {
     ALOGV("%s %d buf=%p in", __FUNCTION__, __LINE__, buf);
     INT32 ret = 0;
-    if (mTunnel) {
-        ret = mSidebandWindow->remainBuffer((buffer_handle_t)buf);
+    if (mSidebandWin != NULL) {
+        ret = rk_vt_win_cancelBuffer(mSidebandWin, (vt_buffer_t *)buf);
     } else {
         if (getNativeWindow() == NULL)
             return -1;
@@ -151,8 +156,8 @@ INT32 RTSurfaceCallback::remainBuffer(void *buf, INT32 fence) {
 INT32 RTSurfaceCallback::queueBuffer(void *buf, INT32 fence) {
     ALOGV("%s %d buf=%p in", __FUNCTION__, __LINE__, buf);
     INT32 ret = 0;
-    if (mTunnel) {
-        ret = mSidebandWindow->queueBuffer((buffer_handle_t)buf);
+    if (mSidebandWin != NULL) {
+        ret = rk_vt_win_queueBuffer(mSidebandWin, (vt_buffer_t *)buf, fence, 0);
     } else {
         if (getNativeWindow() == NULL)
             return -1;
@@ -175,10 +180,14 @@ INT32 RTSurfaceCallback::dequeueBufferAndWait(RTNativeWindowBufferInfo *info) {
     buffer_handle_t             bufferHandle = NULL;
     gralloc_private_handle_t    privHandle;
     ANativeWindowBuffer *buf = NULL;
+    vt_buffer_t *vtBuf = NULL;
 
     memset(info, 0, sizeof(RTNativeWindowBufferInfo));
-    if (mTunnel) {
-        mSidebandWindow->dequeueBuffer((buffer_handle_t *)&bufferHandle);
+    if (mSidebandWin != NULL) {
+        ret = rk_vt_win_dequeueBufferAndWait(mSidebandWin, &vtBuf);
+        if (vtBuf) {
+            bufferHandle = vtBuf->handle;
+        }
     } else {
         if (getNativeWindow() == NULL)
             return -1;
@@ -192,8 +201,8 @@ INT32 RTSurfaceCallback::dequeueBufferAndWait(RTNativeWindowBufferInfo *info) {
     if (bufferHandle) {
         Rockchip_get_gralloc_private((UINT32 *)bufferHandle, &privHandle);
 
-        if (mTunnel) {
-            info->windowBuf = (void *)bufferHandle;
+        if (mSidebandWin != NULL) {
+            info->windowBuf = (void *)vtBuf;
         } else {
             info->windowBuf = (void *)buf;
         }
@@ -206,14 +215,13 @@ INT32 RTSurfaceCallback::mmapBuffer(RTNativeWindowBufferInfo *info, void **ptr) 
     status_t err = OK;
     ANativeWindowBuffer *buf = NULL;
     void *tmpPtr = NULL;
-    (void)ptr;
 
     if (info->windowBuf == NULL || ptr == NULL) {
         ALOGE("lockBuffer bad value, windowBuf=%p, &ptr=%p", info->windowBuf, ptr);
         return RT_ERR_VALUE;
     }
 
-    if (mTunnel)
+    if (mSidebandWin != NULL)
         return RT_ERR_UNSUPPORT;
 
     buf = static_cast<ANativeWindowBuffer *>(info->windowBuf);
@@ -235,7 +243,7 @@ INT32 RTSurfaceCallback::munmapBuffer(void **ptr, INT32 size, void *buf) {
     (void)ptr;
     (void)size;
 
-    if (mTunnel)
+    if (mSidebandWin != NULL)
         return RT_ERR_UNSUPPORT;
 
     sp<GraphicBuffer> graphicBuffer(
@@ -254,21 +262,28 @@ INT32 RTSurfaceCallback::setCrop(
         INT32 top,
         INT32 right,
         INT32 bottom) {
-        ALOGV("%s %d in crop(%d,%d,%d,%d)", __FUNCTION__, __LINE__, left, top, right, bottom);
-        android_native_rect_t crop;
+    ALOGV("%s %d in crop(%d,%d,%d,%d)", __FUNCTION__, __LINE__, left, top, right, bottom);
+    android_native_rect_t crop;
 
-        crop.left = left;
-        crop.top = top;
-        crop.right = right;
-        crop.bottom = bottom;
-        if (mTunnel) {
-            mSidebandWindow->setCrop(left, top, right, bottom);
-        }
+    if (mSidebandWin != NULL) {
+        vt_win_attr_t attr;
+        rk_vt_win_getAttr(mSidebandWin, &attr);
+        attr.left = left;
+        attr.top = top;
+        attr.right = right;
+        attr.bottom = bottom;
+        return rk_vt_win_setAttr(mSidebandWin, &attr);
+    }
 
-        if (getNativeWindow() == NULL)
-            return -1;
+    crop.left = left;
+    crop.top = top;
+    crop.right = right;
+    crop.bottom = bottom;
 
-        return native_window_set_crop(mNativeWindow.get(), &crop);
+    if (getNativeWindow() == NULL)
+        return -1;
+
+    return native_window_set_crop(mNativeWindow.get(), &crop);
 }
 
 INT32 RTSurfaceCallback::setUsage(INT32 usage) {
@@ -327,8 +342,13 @@ INT32 RTSurfaceCallback::setBufferGeometry(
 
     native_window_set_buffers_dimensions(mNativeWindow.get(), width, height);
     native_window_set_buffers_format(mNativeWindow.get(), format);
-    if (mTunnel) {
-        mSidebandWindow->setBufferGeometry(width, height, format);
+    if (mSidebandWin != NULL) {
+        vt_win_attr_t attr;
+        rk_vt_win_getAttr(mSidebandWin, &attr);
+        attr.width = width;
+        attr.height = height;
+        attr.format = format;
+        return rk_vt_win_setAttr(mSidebandWin, &attr);
     }
 
     return 0;
@@ -336,29 +356,62 @@ INT32 RTSurfaceCallback::setBufferGeometry(
 
 INT32 RTSurfaceCallback::setSidebandStream(RTSidebandInfo info) {
     ALOGV("%s %d in", __FUNCTION__, __LINE__);
-
-    buffer_handle_t             buffer = NULL;
-
-    mSidebandWindow = new RTSidebandWindow();
-    mSidebandWindow->init(info);
-    mSidebandWindow->allocateSidebandHandle(&buffer);
-    if (!buffer) {
-        ALOGE("allocate buffer from sideband window failed!");
-        return -1;
-    }
-    mSidebandHandle = buffer;
-    mTunnel = 1;
+    status_t err = OK;
 
     if (getNativeWindow() == NULL)
         return -1;
 
-    return native_window_set_sideband_stream(mNativeWindow.get(), (native_handle_t *)buffer);
+    if (mSidebandWin == NULL) {
+        vt_win_attr_t attr;
+
+        memset(&attr, 0, sizeof(vt_win_attr_t));
+        attr.struct_size = sizeof(vt_win_attr_t);
+        attr.struct_ver = 0;
+        attr.left = info.left;
+        attr.top = info.top;
+        attr.right = info.right;
+        attr.bottom = info.bottom;
+        attr.usage = info.usage;
+        attr.width = info.width;
+        attr.height = info.height;
+        attr.format = info.format;
+        attr.data_space = info.dataSpace;
+        attr.compress_mode = info.compressMode;
+        attr.transform = info.transform;
+        attr.buffer_cnt = info.bufferCnt;
+        attr.remain_cnt = info.remainCnt;
+        attr.native_window = mNativeWindow.get();
+        err = rk_vt_win_create(&attr, &mSidebandWin);
+        if (err != 0) {
+            ALOGE("sideband winow set attr failed: %s (%d)", strerror(-err), -err);
+            return err;
+        }
+        rk_vt_win_allocSidebandStream(mSidebandWin, &mSidebandHandle);
+        if (!mSidebandHandle) {
+            ALOGE("allocate buffer from sideband window failed!");
+            return -1;
+        }
+        err = native_window_set_sideband_stream(mNativeWindow.get(), (native_handle_t *)mSidebandHandle);
+        if (err != 0) {
+            ALOGE("native_window_set_sideband_stream failed: %s (%d)", strerror(-err), -err);
+            return err;
+        }
+    } else {
+        err = native_window_set_sideband_stream(mNativeWindow.get(), NULL);
+        if (err != 0) {
+            ALOGE("native_window_set_sideband_stream failed: %s (%d)", strerror(-err), -err);
+            return err;
+        }
+    }
+
+    return 0;
 }
 
 buffer_handle_t RTSurfaceCallback::buf2hnl(void *buf) {
     buffer_handle_t handle;
-    if (mTunnel) {
-        handle = (buffer_handle_t)buf;
+
+    if (mSidebandWin) {
+        handle = ((vt_buffer_t *)buf)->handle;
     } else {
         handle = ((ANativeWindowBuffer *)buf)->handle;
     }

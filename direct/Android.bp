@@ -10,9 +10,6 @@ cc_library_shared {
         "RTGraphicWindowApi.cpp",
         "RTSubtitleSink.cpp",
         "RTChips.cpp",
-        "sideband/RTSidebandWindow.cpp",
-        "sideband/DrmVopRender.cpp",
-        "sideband/MessageThread.cpp",
         "RTMetadataRetrieverCallback.cpp",
         "RockitMetadataRetriever.cpp",
         "RTVdecExtendFeature.cpp",
@@ -32,12 +29,14 @@ cc_library_shared {
         "libaudioclient",
         "libdrm",
         "libbinder",
-        "libhardware"
+        "libhardware",
+        "librkvt_win",
     ],
 
     header_libs: [
         "libmediametrics_headers",
         "libhardware_rockchip_headers",
+        "libhardware_headers",
     ],
 
     static_libs: [
@@ -53,9 +52,14 @@ cc_library_shared {
         "vendor/rockchip/hardware/interfaces/rockit/include/rt_base",
         "vendor/rockchip/hardware/interfaces/rockit/include/rt_media",
         "vendor/rockchip/hardware/interfaces/rockit/include/rt_player",
+        "vendor/rockchip/hardware/interfaces/vtunnel/include",
     ],
 
     local_include_dirs: ["include"],
+
+    export_shared_lib_headers: [
+        "libui",
+    ],
 
     cflags: [
         "-Werror",

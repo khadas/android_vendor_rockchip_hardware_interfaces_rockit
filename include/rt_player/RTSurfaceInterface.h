@@ -42,12 +42,16 @@ typedef struct RT_SIDEBAND_INFO {
     INT32 top;
     INT32 right;
     INT32 bottom;
-    INT32 usage;
     INT32 width;
     INT32 height;
     INT32 format;
-    INT32 dataSpace;
+    INT64 usage;
+    INT64 dataSpace;
     INT32 transform;
+    INT32 compressMode;
+    INT32 bufferCnt;
+    INT32 remainCnt;
+    INT32 reserved[16];
 } RTSidebandInfo;
 
 typedef struct RT_HDR_META {
