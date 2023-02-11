@@ -355,6 +355,17 @@ INT32 RTSurfaceCallback::setSidebandStream(RTSidebandInfo info) {
     return native_window_set_sideband_stream(mNativeWindow.get(), (native_handle_t *)buffer);
 }
 
+buffer_handle_t RTSurfaceCallback::buf2hnl(void *buf) {
+    buffer_handle_t handle;
+    if (mTunnel) {
+        handle = (buffer_handle_t)buf;
+    } else {
+        handle = ((ANativeWindowBuffer *)buf)->handle;
+    }
+    return handle;
+}
+
+
 INT32 RTSurfaceCallback::query(INT32 cmd, INT32 *param) {
     ALOGV("%s %d in", __FUNCTION__, __LINE__);
     INT32 ret = RT_OK;
@@ -369,18 +380,24 @@ INT32 RTSurfaceCallback::query(INT32 cmd, INT32 *param) {
       case RT_SURFACE_CMD_SET_HDR_META : {
         RTHdrMeta *hdrMeta = (RTHdrMeta *)param;
         int64_t offset = (int64_t)hdrMeta->offset;
-        buffer_handle_t handle;
-
-        if (mTunnel) {
-            handle = (buffer_handle_t)hdrMeta->buf;
-        } else {
-            handle = ((ANativeWindowBuffer *)hdrMeta->buf)->handle;
-        }
+        buffer_handle_t handle = buf2hnl(hdrMeta->buf);
 
         ret = RTVdecExtendFeature::configFrameHdrDynamicMeta(handle, offset);
       } break;
       case RT_SURFACE_CMD_GET_HDR_META : {
 
+      } break;
+      case RT_SURFACE_CMD_SET_SCALE_META : {
+        RTScaleMeta *scaleMeta = (RTScaleMeta *)param;
+        buffer_handle_t handle = buf2hnl(scaleMeta->buf);
+
+        ret = RTVdecExtendFeature::configFrameScaleMeta(handle, scaleMeta);
+      } break;
+      case RT_SURFACE_CMD_GET_SCALE_META : {
+        RTScaleMeta *scaleMeta = (RTScaleMeta *)param;
+        buffer_handle_t handle = buf2hnl(scaleMeta->buf);
+
+        scaleMeta->request = RTVdecExtendFeature::checkNeedScale(handle);
       } break;
       default : {
         ret = RT_ERR_UNSUPPORT;

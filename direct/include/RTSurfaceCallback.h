@@ -59,6 +59,9 @@ class RTSurfaceCallback : public RTSurfaceInterface {
     virtual INT32 setNativeWindow(const sp<IGraphicBufferProducer> &bufferProducer);
 
  private:
+    buffer_handle_t buf2hnl(void *buf);
+
+ private:
     INT32                   mTunnel;
     buffer_handle_t         mSidebandHandle;
     sp<RTSidebandWindow>    mSidebandWindow;

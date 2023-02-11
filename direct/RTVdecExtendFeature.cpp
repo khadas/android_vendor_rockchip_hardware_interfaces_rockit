@@ -211,4 +211,83 @@ int RTVdecExtendFeature::configFrameHdrDynamicMeta(buffer_handle_t hnd, int64_t 
     return ret;
 }
 
+int RTVdecExtendFeature::checkNeedScale(buffer_handle_t hnd)
+{
+    int ret = 0;
+    int need = 0;
+    uint64_t bufId = 0;
+
+    metadata_for_rkvdec_scaling_t* metadata = NULL;
+    GrallocModule::getInstance()->getHndBufId(hnd, &bufId);
+    ret = GrallocModule::getInstance()->mapScaleMeta(hnd, &metadata);
+    if (!ret) {
+        /*
+         * NOTE: After info change realloc buf, buf has not processed by hwc,
+         * metadata->requestMask is default value 0. So we define:
+         * requestMask = 1 : need scale
+         * requestMask = 2 : no need scale
+         * other : keep same as before
+         */
+        switch (metadata->requestMask) {
+        case 1:
+            need = 1;
+            ALOGV("bufId:0x%" PRIx64" hwc need scale", bufId);
+            break;
+        case 2:
+            need = 0;
+            ALOGV("bufId:0x%" PRIx64" hwc no need scale", bufId);
+            break;
+        default:
+            need = -1;
+            break;
+        }
+        GrallocModule::getInstance()->unmapScaleMeta(hnd);
+    }
+
+    return need;
+}
+
+int RTVdecExtendFeature::configFrameScaleMeta(buffer_handle_t hnd, RTScaleMeta *scaleMeta)
+{
+    int ret = 0;
+    metadata_for_rkvdec_scaling_t* metadata = NULL;
+
+    ret = GrallocModule::getInstance()->mapScaleMeta(hnd, &metadata);
+    if (!ret) {
+        INT32 thumbWidth       = scaleMeta->thumbWidth;
+        INT32 thumbHeight      = scaleMeta->thumbHeight;
+        INT32 thumbHorStride   = scaleMeta->thumbHorStride;
+        uint64_t usage         = 0;
+
+        metadata->replyMask     = 1;
+        /*
+         * NOTE: keep same with gralloc
+         * width = stride, crop real size
+         */
+        metadata->width         = thumbHorStride;
+        metadata->height        = thumbHeight;
+        metadata->pixel_stride  = thumbHorStride;
+        metadata->format        = scaleMeta->format;
+
+        // NV12 8/10 bit nfbc, modifier = 0
+        metadata->modifier      = 0;
+
+        metadata->srcLeft       = 0;
+        metadata->srcTop        = 0;
+        metadata->srcRight      = thumbWidth;
+        metadata->srcBottom     = thumbHeight;
+        metadata->offset[0]     = scaleMeta->yOffset;
+        metadata->offset[1]     = scaleMeta->uvOffset;
+        metadata->byteStride[0] = thumbHorStride;
+        metadata->byteStride[1] = thumbHorStride;
+
+        GrallocModule::getInstance()->getUsage(hnd, &usage);
+        metadata->usage         = (uint32_t)usage;
+    }
+
+    ret = GrallocModule::getInstance()->unmapScaleMeta(hnd);
+
+    return ret;
+}
+
 }

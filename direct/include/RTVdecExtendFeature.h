@@ -10,6 +10,8 @@ class RTVdecExtendFeature
 {
 public:
     static int configFrameHdrDynamicMeta(buffer_handle_t hnd, int64_t offset);
+    static int checkNeedScale(buffer_handle_t hnd);
+    static int configFrameScaleMeta(buffer_handle_t hnd, RTScaleMeta *scaleMeta);
 };
 }
 

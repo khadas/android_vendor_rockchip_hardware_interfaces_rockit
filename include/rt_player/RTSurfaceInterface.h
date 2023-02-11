@@ -55,14 +55,27 @@ typedef struct RT_HDR_META {
     INT32 offset;
 } RTHdrMeta;
 
+typedef struct RT_SCALE_META {
+    void *buf;
+    INT32 request;
+    INT32 thumbWidth;
+    INT32 thumbHeight;
+    INT32 thumbHorStride;
+    INT32 format;
+    INT32 yOffset;
+    INT32 uvOffset;
+} RTScaleMeta;
+
 enum RT_SURFACE_CMD {
     RT_SURFACE_QUERY_MIN_UNDEQUEUED_BUFFERS    = 3,
 
     // SET CMD
     RT_SURFACE_CMD_SET_HDR_META                = 0x1000,  // param RTHdrMeta
+    RT_SURFACE_CMD_SET_SCALE_META,                        // param RTScaleMeta
 
     // GET CMD
     RT_SURFACE_CMD_GET_HDR_META                = 0x2000,  // param RTHdrMeta
+    RT_SURFACE_CMD_GET_SCALE_META,                        // param RTScaleMeta
 };
 
 class RTSurfaceInterface {

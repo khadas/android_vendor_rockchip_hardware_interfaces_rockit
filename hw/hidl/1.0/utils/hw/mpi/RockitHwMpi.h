@@ -58,6 +58,7 @@ protected:
 
 private:
     int enableHdrMeta(int enable);
+    int enableScaleDec(int enable);
 
 protected:
     void* mCtx;
@@ -67,6 +68,9 @@ protected:
     int   mHStride;
     bool  mDebug;
     Mutex mLock;
+
+private:
+    bool  mScaleSupport;
 };
 
 }  // namespace utils

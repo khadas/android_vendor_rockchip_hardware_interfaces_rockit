@@ -116,6 +116,7 @@ enum RockitHWCtrCmd : uint32_t {
     HW_CMD_BUFFER_GROUP_CLEAR = 1,
     HW_CMD_BUFFER_READY,
     HW_CMD_BUFFER_DATA_CLEAR,
+    HW_CMD_SCALE_EN,
     /* add more here if need */
 };
 

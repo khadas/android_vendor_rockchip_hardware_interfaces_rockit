@@ -312,6 +312,7 @@ RockitHwMpi::RockitHwMpi() {
     mDebug = false;
     mWStride = 0;
     mHStride = 0;
+    mScaleSupport = false;
 }
 
 RockitHwMpi::~RockitHwMpi() {
@@ -361,6 +362,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     uint32_t            fbcOutput = 0;
     uint32_t            timeMode = 0;
     uint32_t            hdrMetaEn = 0;
+    uint32_t            scaleDecEn = 0;
     uint32_t            debug = 0;
 
     Mutex::Autolock autoLock(mLock);
@@ -387,6 +389,8 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     fbcOutput = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_FBC_OUTPUT);
     timeMode = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_PRESENT_TIME_ORDER);
     hdrMetaEn = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_HDR_META_EN);
+    scaleDecEn = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_SCALE_EN);
+
     debug  = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_DEBUG);
 
     if (debug > 0) {
@@ -478,6 +482,9 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     if (hdrMetaEn) {
         ALOGD("enable hdr meta");
         enableHdrMeta(1);
+    }
+    if (scaleDecEn) {
+        enableScaleDec(1);
     }
 
     mpp_buffer_group_clear(ctx->frm_grp);
@@ -624,6 +631,8 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
     RockitHWParamPairs&     param = hwBuffer.pair;
     RK_S32                  hdrMetaOffset = 0;
     RK_S32                  hdrMetaSize = 0;
+    RK_S32                  scaleYOffset = 0;
+    RK_S32                  scaleUvOffset = 0;
     bool isI4O2 = false;
     int  ret = 0;
     int  eos = 0;
@@ -631,7 +640,7 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
     uint64_t flags = 0;
     int  fd = -1;
     hwBuffer.bufferId = -1;
-    param.pairs.resize(10);
+    param.pairs.resize(20);
     param.counter = 0;
 
     mpp_ctx = ctx->mpp_ctx;
@@ -696,6 +705,8 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
             (uint64_t)mpp_frame_get_pts(mpp_frame));
         setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_DTS,
             (uint64_t)mpp_frame_get_dts(mpp_frame));
+        setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_FORMAT,
+            (uint64_t)mpp_frame_get_fmt(mpp_frame));
 
         if (mpp_frame_has_meta(mpp_frame) && MPP_FRAME_FMT_IS_HDR(mpp_frame_get_fmt(mpp_frame))) {
             MppMeta meta = mpp_frame_get_meta(mpp_frame);
@@ -707,6 +718,20 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
                          (uint64_t)hdrMetaOffset);
                 setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_HDR_META_SIZE,
                          (uint64_t)hdrMetaSize);
+            }
+        }
+
+        if (mScaleSupport && mpp_frame_has_meta(mpp_frame) && mpp_frame_get_thumbnail_en(mpp_frame)) {
+            MppMeta meta = NULL;
+
+            meta = mpp_frame_get_meta(mpp_frame);
+            mpp_meta_get_s32(meta, KEY_DEC_TBN_Y_OFFSET, &scaleYOffset);
+            mpp_meta_get_s32(meta, KEY_DEC_TBN_UV_OFFSET, &scaleUvOffset);
+            if (scaleYOffset && scaleUvOffset) {
+                setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_SCALE_Y_OFFSET,
+                         (uint64_t)scaleYOffset);
+                setValue(param, (uint32_t)RockitHWParamKey::HW_KEY_SCALE_UV_OFFSET,
+                         (uint64_t)scaleUvOffset);
             }
         }
 
@@ -733,7 +758,8 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
 
         if (mDebug) {
            ALOGD("%s: this = %p, mUniqueID = %d, fd = %d, mppBuffer = %p, mpp_frame = %p,frame width: %d frame height: %d width: %d height %d "
-                                  "pts %lld dts %lld hdrMetaOffset %d Err %d EOS %d Infochange %d isI4O2: %d flags: %lld",
+                                  "pts %lld dts %lld hdrMetaOffset %d thumbYOffset %d, thumbUvOffset %d "
+                                  "Err %d EOS %d Infochange %d isI4O2: %d flags: %lld",
                                   __FUNCTION__, this, hwBuffer.bufferId,
                                   fd, buffer, mpp_frame,
                                   mpp_frame_get_hor_stride(mpp_frame),
@@ -742,7 +768,7 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
                                   mpp_frame_get_height(mpp_frame),
                                   mpp_frame_get_pts(mpp_frame),
                                   mpp_frame_get_dts(mpp_frame),
-                                  hdrMetaOffset,
+                                  hdrMetaOffset, scaleYOffset, scaleUvOffset,
                                   mpp_frame_get_errinfo(mpp_frame),
                                   eos, infochange, isI4O2,
                                   (long long)flags);
@@ -920,6 +946,15 @@ int RockitHwMpi::control(int cmd, const RockitHWParamPairs& param) {
                 int buffer_id = (int)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_DATA_BUFFER);
                 freeDataBuffer(buffer_id);
             } break;
+        case RockitHWCtrCmd::HW_CMD_SCALE_EN: {
+                if (mDebug) {
+                    ALOGD("%s: HW_CMD_SCALE_EN", __FUNCTION__);
+                }
+
+                int scaleDecEn = (uint32_t)getValue(pairs, (uint32_t)RockitHWParamKey::HW_KEY_SCALE_EN);
+                enableScaleDec(scaleDecEn);
+            } break;
+
         default:
             ALOGE("%s: cmd = %d not support", __FUNCTION__, cmd);
             ret = -1;
@@ -1012,6 +1047,30 @@ int RockitHwMpi::enableHdrMeta(int enable) {
 
     return ret;
 }
+
+int RockitHwMpi::enableScaleDec(int enable) {
+    int ret = 0;
+    MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
+    MppCtx mpp_ctx         = ctx->mpp_ctx;
+    MppApi *mpp_mpi        = ctx->mpp_mpi;
+
+    if ((mpp_ctx != NULL) && (mpp_ctx != NULL)) {
+        MppDecCfg cfg;
+        mpp_dec_cfg_init(&cfg);
+        mpp_mpi->control(mpp_ctx, MPP_DEC_GET_CFG, cfg);
+        if(!mpp_dec_cfg_set_u32(cfg, "base:enable_thumbnail", enable)) {
+            mScaleSupport = true;
+        }
+        mpp_mpi->control(mpp_ctx, MPP_DEC_SET_CFG, cfg);
+        mpp_dec_cfg_deinit(cfg);
+        ALOGD("enable scale dec");
+    } else {
+        ret = -1;
+    }
+
+    return ret;
+}
+
 
 }  // namespace utils
 }  // namespace V1_0
