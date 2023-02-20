@@ -428,8 +428,8 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
             ALOGD("use mpp fbc output mode");
             uint32_t MPP_FRAME_FBC_AFBC_V2 = 0x00200000;
             mppFormat |= MPP_FRAME_FBC_AFBC_V2;
-            mpp_mpi->control(mpp_ctx, MPP_DEC_SET_OUTPUT_FORMAT, (MppParam)&mppFormat);
         }
+        mpp_mpi->control(mpp_ctx, MPP_DEC_SET_OUTPUT_FORMAT, (MppParam)&mppFormat);
 
         mpp_frame_init(&frame);
         mpp_frame_set_width(frame, width);
