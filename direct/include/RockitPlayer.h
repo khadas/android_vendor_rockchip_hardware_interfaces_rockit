@@ -29,6 +29,7 @@ namespace android {
 enum RTInvokeId {
     RT_INVOKE_SET_PLAY_SPEED = 10000,
     RT_INVOKE_GET_PLAY_SPEED,
+    RT_INVOKE_SET_SUB_VISIBLE,
 };
 
 class RockitPlayer : public RefBase {

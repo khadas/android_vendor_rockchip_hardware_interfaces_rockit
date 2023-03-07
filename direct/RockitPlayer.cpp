@@ -37,6 +37,10 @@ typedef enum  _RTInvokeIds {
     RT_INVOKE_ID_GET_SELECTED_TRACK = 7
 } RTInvokeIds;
 
+typedef enum  _RTInvokeExtIds {
+    INVOKE_ID_SET_SUB_VISIBLE = 969,   // for compatible with previous apps(MediaCenter)
+} RTInvokeExtIds;
+
 RockitPlayer::RockitPlayer()
               : mPlayerImpl(NULL),
                 mPlayerLibFd(NULL),
@@ -231,6 +235,12 @@ INT32 RockitPlayer::fillInvokeRequest(const Parcel &request, RtMetaData* meta, I
             INT32 rtType = translateMediaType(andrType, false);
             meta->setInt32(kUserInvokeCmd, RT_INVOKE_ID_GET_SELECTED_TRACK);
             meta->setInt32(kUserInvokeGetSelectTrack, rtType);
+        } break;
+
+        case INVOKE_ID_SET_SUB_VISIBLE: {
+            INT32 visible = request.readInt32();
+            meta->setInt32(kUserInvokeCmd, RT_INVOKE_SET_SUB_VISIBLE);
+            meta->setInt32(kKeySubVisible, visible);
         } break;
 
         default:

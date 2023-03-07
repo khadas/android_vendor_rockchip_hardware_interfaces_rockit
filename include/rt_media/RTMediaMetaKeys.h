@@ -206,6 +206,7 @@ enum {
     /* for new pipeline */
     kKeyPipeInvokeCmd          = MKTAG('p', 'c', 'm', 'd'),    // const char *
     kKeyTaskNodeId             = MKTAG('t', 'n', 'i', 'd'),    // INT32
+    kKeySubVisible             = MKTAG('s', 'v', 'b', 'l'),
 };
 
 enum {
