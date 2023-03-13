@@ -68,6 +68,7 @@ class RockitPlayer : public RefBase {
     virtual rt_status setParameter(INT32 key, const Parcel &request);
     virtual rt_status setListener(RTPlayerListener *listener);
     virtual rt_status setPlaybackSettings(const AudioPlaybackRate& rate);
+    virtual rt_status dump(int fd, const Vector<String16> &args);
 
  protected:
     rt_status fillInvokeRequest(const Parcel &parcel, RtMetaData* meta, INT32& event);

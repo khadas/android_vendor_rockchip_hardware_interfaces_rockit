@@ -293,9 +293,7 @@ status_t RockitPlayerManager::setPlaybackSettings(const AudioPlaybackRate& rate)
 }
 
 status_t RockitPlayerManager::dump(int fd, const Vector<String16> &args) const {
-    (void)args;
-    (void)fd;
-    return OK;//reinterpret_cast<status_t>(mPlayer->dump(args));
+    return reinterpret_cast<status_t>(mCtx->mPlayer->dump(fd, args));
 }
 
 sp<MediaPlayerBase::AudioSink> RockitPlayerManager::getAudioSink() {

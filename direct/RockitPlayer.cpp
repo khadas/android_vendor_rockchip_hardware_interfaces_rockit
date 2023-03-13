@@ -447,5 +447,11 @@ rt_status RockitPlayer::setPlaybackSettings(const AudioPlaybackRate& rate) {
     return status;
 }
 
+rt_status RockitPlayer::dump(int fd, const Vector<String16> &args) {
+    (void)args;
+    // TODO(@media-team): unsupport args.
+    return mPlayerImpl->dump(fd, NULL);
+}
+
 }
 
