@@ -364,6 +364,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     uint32_t            hdrMetaEn = 0;
     uint32_t            scaleDecEn = 0;
     uint32_t            debug = 0;
+    uint32_t            enable_fast_play = 1;
 
     Mutex::Autolock autoLock(mLock);
     MpiCodecContext* ctx = (MpiCodecContext*)malloc(sizeof(MpiCodecContext));
@@ -473,6 +474,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
 
     // TODO(control cmds)
     mpp_mpi->control(mpp_ctx, MPP_DEC_SET_EXT_BUF_GROUP, frm_grp);
+    mpp_mpi->control(mpp_ctx, MPP_DEC_SET_ENABLE_FAST_PLAY, &enable_fast_play);
 
     ctx->mpp_ctx = mpp_ctx;
     ctx->mpp_mpi = mpp_mpi;
