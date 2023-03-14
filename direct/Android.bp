@@ -13,6 +13,7 @@ cc_library_shared {
         "RTMetadataRetrieverCallback.cpp",
         "RockitMetadataRetriever.cpp",
         "RTVdecExtendFeature.cpp",
+        "RockitCodecRegisterInterface.cpp",
     ],
 
     shared_libs: [
