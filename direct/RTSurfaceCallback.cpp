@@ -78,6 +78,12 @@ INT32 RTSurfaceCallback::disconnect(INT32 mode) {
     if (getNativeWindow() == NULL)
         return -1;
 
+    // if native window disconnect. we need clear old buffer,
+    // so we should flush the sideband win for clear buffer maps.
+    if (mSidebandWin != NULL) {
+        rk_vt_win_flush(mSidebandWin);
+    }
+
     return native_window_api_disconnect(mNativeWindow.get(), NATIVE_WINDOW_API_MEDIA);;
 }
 
@@ -392,12 +398,6 @@ INT32 RTSurfaceCallback::setSidebandStream(RTSidebandInfo info) {
             return -1;
         }
         err = native_window_set_sideband_stream(mNativeWindow.get(), (native_handle_t *)mSidebandHandle);
-        if (err != 0) {
-            ALOGE("native_window_set_sideband_stream failed: %s (%d)", strerror(-err), -err);
-            return err;
-        }
-    } else {
-        err = native_window_set_sideband_stream(mNativeWindow.get(), NULL);
         if (err != 0) {
             ALOGE("native_window_set_sideband_stream failed: %s (%d)", strerror(-err), -err);
             return err;
