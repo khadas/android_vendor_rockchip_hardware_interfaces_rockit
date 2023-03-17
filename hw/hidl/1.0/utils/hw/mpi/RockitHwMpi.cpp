@@ -682,6 +682,11 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
                 if (bufferCtx != NULL) {
                     bufferCtx->mSite = BUFFER_SITE_BY_ROCKIT;
                     fd = bufferCtx->mFd;
+                } else {
+                    ALOGW("%s can't find mpp buffer by bufferId %d, ignore it",
+                            __FUNCTION__, hwBuffer.bufferId);
+                    ret = -1;
+                    goto __FAILED;
                 }
             }
         } else if (infochange || eos) {
