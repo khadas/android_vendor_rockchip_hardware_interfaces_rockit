@@ -18,6 +18,10 @@
 #define ROCKIT_DIRECT_RTLIBDEFINE_H
 
 #include <stdint.h>
+#include "rt_error.h"
+#include "RockitExtAdec.h"
+
+namespace android {
 
 #define ROCKIT_PLAYER_LIB_NAME          "/system/lib/librockit.so"
 
@@ -30,6 +34,9 @@
 #define CREATE_METARETRIEVER_FUNC_NAME  "createRTMetadataRetriever"
 #define DESTROY_METARETRIEVER_FUNC_NAME "destroyRTMetadataRetriever"
 
+#define REGISTER_DECODER_FUNC_NAME      "RockitRegisterDecoder"
+#define UNREGISTER_DECODER_FUNC_NAME    "RockitUnRegisterDecoder"
+
 // rockit player
 typedef void * createRockitPlayerFunc();
 typedef void   destroyRockitPlayerFunc(void **player);
@@ -41,6 +48,10 @@ typedef void   destroyRockitMetaDataFunc(void **meta);
 // rockit meta data retriever
 typedef void * createMetaDataRetrieverFunc();
 typedef void   destroyMetaDataRetrieverFunc(void **retriever);
+
+// rockit register codec
+typedef RT_RET registerDecoderFunc(int32_t *ps32Handle, const RTAdecDecoder *pstDecoder);
+typedef RT_RET unRegisterDecoderFunc(int32_t s32Handle);
 
 /**************************************************************
  * NOTE:
@@ -250,4 +261,6 @@ typedef enum {
      RT_SUB_ID_HDMV_TEXT,
      RT_SUB_CodingMax
 } RTCodecID;
+
+}
 #endif // ROCKIT_DIRECT_RTLIBDEFINE_H

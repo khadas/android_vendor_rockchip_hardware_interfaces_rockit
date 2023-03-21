@@ -19,10 +19,12 @@
 
 #include <stdint.h>
 #include <dlfcn.h>
+#include <stdlib.h>
 
 #include "RockitPlayer.h"
 #include "RTMediaMetaKeys.h"
 #include "media/mediaplayer.h"
+#include "RockitExtCodecRegister.h"
 
 namespace android {
 
@@ -85,6 +87,18 @@ class PlayerLibLoader {
         if(mDestroyMetaDataFunc == NULL) {
             ALOGE("dlsym for destroy meta data failed, dlerror: %s", dlerror());
         }
+
+        mRegisterCodec = (registerDecoderFunc *)dlsym(mPlayerLibFd,
+                                                            REGISTER_DECODER_FUNC_NAME);
+        if(mRegisterCodec == NULL) {
+            ALOGE("dlsym for register codec failed, dlerror: %s", dlerror());
+        }
+
+        mUnRegisterCodec = (unRegisterDecoderFunc *)dlsym(mPlayerLibFd,
+                                                            UNREGISTER_DECODER_FUNC_NAME);
+        if(mUnRegisterCodec == NULL) {
+            ALOGE("dlsym for unregister codec failed, dlerror: %s", dlerror());
+        }
     }
 
     ~PlayerLibLoader() {
@@ -108,6 +122,8 @@ class PlayerLibLoader {
     destroyRockitPlayerFunc     *mDestroyPlayerFunc;
     createRockitMetaDataFunc    *mCreateMetaDataFunc;
     destroyRockitMetaDataFunc   *mDestroyMetaDataFunc;
+    registerDecoderFunc         *mRegisterCodec;
+    unRegisterDecoderFunc       *mUnRegisterCodec;
 
  private:
     static GC                    gc;
@@ -135,15 +151,19 @@ RockitPlayer::~RockitPlayer() {
 
 status_t RockitPlayer::createPlayer() {
     ALOGV("createPlayer");
-
+    registerDecoderFunc *registerFunc = NULL;
     mCreatePlayerFunc    = PlayerLibLoader::getInstance()->mCreatePlayerFunc;
     mDestroyPlayerFunc   = PlayerLibLoader::getInstance()->mDestroyPlayerFunc;
     mCreateMetaDataFunc  = PlayerLibLoader::getInstance()->mCreateMetaDataFunc;
     mDestroyMetaDataFunc = PlayerLibLoader::getInstance()->mDestroyMetaDataFunc;
+    registerFunc         = PlayerLibLoader::getInstance()->mRegisterCodec;
     mPlayerImpl = (RTMediaPlayerInterface *)mCreatePlayerFunc();
     if (mPlayerImpl == NULL) {
         ALOGE("create player failed, player is null");
     }
+
+    RockitExtCodecRegister::rockitRegisterCodec(registerFunc);
+
     ALOGV("player : %p", mPlayerImpl);
     return OK;
 }
