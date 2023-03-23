@@ -41,9 +41,87 @@ typedef enum  _RTInvokeExtIds {
     INVOKE_ID_SET_SUB_VISIBLE = 969,   // for compatible with previous apps(MediaCenter)
 } RTInvokeExtIds;
 
+class PlayerLibLoader {
+ public:
+    static PlayerLibLoader *getInstance() {
+        if (mInstance == NULL) {
+            Mutex::Autolock autoLock(mLock);
+            if (mInstance == NULL) {
+                mInstance = new PlayerLibLoader();
+            }
+        }
+
+        return mInstance;
+     }
+
+ private:
+    PlayerLibLoader() {
+        ALOGD("PlayerLibLoader(%p) construct", this);
+        mPlayerLibFd = dlopen(ROCKIT_PLAYER_LIB_NAME, RTLD_LAZY);
+        if (mPlayerLibFd == NULL) {
+            ALOGE("Cannot load library %s dlerror: %s", ROCKIT_PLAYER_LIB_NAME, dlerror());
+        }
+
+        mCreatePlayerFunc = (createRockitPlayerFunc *)dlsym(mPlayerLibFd,
+                                                            CREATE_PLAYER_FUNC_NAME);
+        if(mCreatePlayerFunc == NULL) {
+            ALOGE("dlsym for create player failed, dlerror: %s", dlerror());
+        }
+
+        mDestroyPlayerFunc = (destroyRockitPlayerFunc *)dlsym(mPlayerLibFd,
+                                                            DESTROY_PLAYER_FUNC_NAME);
+        if(mDestroyPlayerFunc == NULL) {
+            ALOGE("dlsym for destroy player failed, dlerror: %s", dlerror());
+        }
+
+        mCreateMetaDataFunc = (createRockitPlayerFunc *)dlsym(mPlayerLibFd,
+                                                                CREATE_METADATA_FUNC_NAME);
+        if(mCreateMetaDataFunc == NULL) {
+            ALOGE("dlsym for create meta data failed, dlerror: %s", dlerror());
+        }
+
+        mDestroyMetaDataFunc = (destroyRockitPlayerFunc *)dlsym(mPlayerLibFd,
+                                                            DESTROY_METADATA_FUNC_NAME);
+        if(mDestroyMetaDataFunc == NULL) {
+            ALOGE("dlsym for destroy meta data failed, dlerror: %s", dlerror());
+        }
+    }
+
+    ~PlayerLibLoader() {
+        ALOGD("~PlayerLibLoader(%p) destruct", this);
+        dlclose(mPlayerLibFd);
+    }
+
+    class GC {
+     public:
+        GC() {}
+        ~GC() {
+            if (mInstance != NULL) {
+                delete mInstance;
+                mInstance = NULL;
+            }
+         }
+     };
+
+ public:
+    createRockitPlayerFunc      *mCreatePlayerFunc;
+    destroyRockitPlayerFunc     *mDestroyPlayerFunc;
+    createRockitMetaDataFunc    *mCreateMetaDataFunc;
+    destroyRockitMetaDataFunc   *mDestroyMetaDataFunc;
+
+ private:
+    static GC                    gc;
+    static PlayerLibLoader      *mInstance;
+    static Mutex                 mLock;
+    void                        *mPlayerLibFd;
+};
+
+PlayerLibLoader* PlayerLibLoader::mInstance = NULL;
+Mutex PlayerLibLoader::mLock;
+PlayerLibLoader::GC PlayerLibLoader::gc;
+
 RockitPlayer::RockitPlayer()
               : mPlayerImpl(NULL),
-                mPlayerLibFd(NULL),
                 mCreatePlayerFunc(NULL),
                 mDestroyPlayerFunc(NULL),
                 mCreateMetaDataFunc(NULL),
@@ -58,35 +136,10 @@ RockitPlayer::~RockitPlayer() {
 status_t RockitPlayer::createPlayer() {
     ALOGV("createPlayer");
 
-    mPlayerLibFd = dlopen(ROCKIT_PLAYER_LIB_NAME, RTLD_LAZY);
-    if (mPlayerLibFd == NULL) {
-        ALOGE("Cannot load library %s dlerror: %s", ROCKIT_PLAYER_LIB_NAME, dlerror());
-    }
-
-    mCreatePlayerFunc = (createRockitPlayerFunc *)dlsym(mPlayerLibFd,
-                                                        CREATE_PLAYER_FUNC_NAME);
-    if(mCreatePlayerFunc == NULL) {
-        ALOGE("dlsym for create player failed, dlerror: %s", dlerror());
-    }
-
-    mDestroyPlayerFunc = (destroyRockitPlayerFunc *)dlsym(mPlayerLibFd,
-                                                        DESTROY_PLAYER_FUNC_NAME);
-    if(mDestroyPlayerFunc == NULL) {
-        ALOGE("dlsym for destroy player failed, dlerror: %s", dlerror());
-    }
-
-    mCreateMetaDataFunc = (createRockitPlayerFunc *)dlsym(mPlayerLibFd,
-                                                            CREATE_METADATA_FUNC_NAME);
-    if(mCreateMetaDataFunc == NULL) {
-        ALOGE("dlsym for create meta data failed, dlerror: %s", dlerror());
-    }
-
-    mDestroyMetaDataFunc = (destroyRockitPlayerFunc *)dlsym(mPlayerLibFd,
-                                                        DESTROY_METADATA_FUNC_NAME);
-    if(mDestroyMetaDataFunc == NULL) {
-        ALOGE("dlsym for destroy meta data failed, dlerror: %s", dlerror());
-    }
-
+    mCreatePlayerFunc    = PlayerLibLoader::getInstance()->mCreatePlayerFunc;
+    mDestroyPlayerFunc   = PlayerLibLoader::getInstance()->mDestroyPlayerFunc;
+    mCreateMetaDataFunc  = PlayerLibLoader::getInstance()->mCreateMetaDataFunc;
+    mDestroyMetaDataFunc = PlayerLibLoader::getInstance()->mDestroyMetaDataFunc;
     mPlayerImpl = (RTMediaPlayerInterface *)mCreatePlayerFunc();
     if (mPlayerImpl == NULL) {
         ALOGE("create player failed, player is null");
@@ -99,7 +152,6 @@ status_t RockitPlayer::destroyPlayer() {
     ALOGV("destroyPlayer");
     mDestroyPlayerFunc((void **)&mPlayerImpl);
     mPlayerImpl = NULL;
-    dlclose(mPlayerLibFd);
     return OK;
 }
 

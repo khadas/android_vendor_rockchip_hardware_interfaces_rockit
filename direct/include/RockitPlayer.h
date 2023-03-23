@@ -81,8 +81,6 @@ class RockitPlayer : public RefBase {
  private:
     RTMediaPlayerInterface      *mPlayerImpl;
 
-    // rockit player lib impl
-    void                        *mPlayerLibFd;
     createRockitPlayerFunc      *mCreatePlayerFunc;
     destroyRockitPlayerFunc     *mDestroyPlayerFunc;
 
