@@ -154,6 +154,22 @@ DataBufferCtx::~DataBufferCtx() {
  * Param: fd : the unique ID.
  * Return: the index of mpp buffer in MppBufferList
  */
+void* RockitHwMpi::findMppBuffer(int mpp_fd, int fd) {
+    MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
+    MppBufferCtx* buffer = NULL;
+    if (ctx != NULL && ctx->mCommitList != NULL) {
+        for (int i = 0; i < ctx->mCommitList->size(); i++) {
+            buffer = ctx->mCommitList->editItemAt(i);
+            if (buffer && buffer->mUniqueID == fd
+                  && mpp_buffer_get_fd(buffer->mMppBuffer) == mpp_fd) {
+                return (void*)buffer;
+            }
+        }
+    }
+
+    return NULL;
+}
+
 void* RockitHwMpi::findMppBuffer(int fd) {
     MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
     MppBufferCtx* buffer = NULL;
@@ -678,7 +694,7 @@ int RockitHwMpi::dequeue(RockitHWBuffer& hwBuffer) {
             mpp_buffer_info_get(buffer, &info);
             hwBuffer.bufferId = info.index;
             {
-                MppBufferCtx* bufferCtx = (MppBufferCtx*)findMppBuffer(hwBuffer.bufferId);
+                MppBufferCtx* bufferCtx = (MppBufferCtx*)findMppBuffer(info.fd, hwBuffer.bufferId);
                 if (bufferCtx != NULL) {
                     bufferCtx->mSite = BUFFER_SITE_BY_ROCKIT;
                     fd = bufferCtx->mFd;

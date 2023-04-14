@@ -45,6 +45,7 @@ public:
     virtual int reset();
 
 protected:
+    virtual void* findMppBuffer(int mpp_fd, int fd);
     virtual void* findMppBuffer(int fd);
     virtual void* findDataBuffer(int fd);
     virtual void cleanMppBuffer();
