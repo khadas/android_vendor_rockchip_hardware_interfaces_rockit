@@ -20,29 +20,14 @@
 #include <android/IMediaExtractor.h>
 #include <media/MediaMetadataRetrieverInterface.h>
 #include <utils/KeyedVector.h>
-
-#include "RTLibDefine.h"
-#include "rt_metadata.h"
-#include "RTMetadataRetrieverInterface.h"
-#include "RTMetadataRetrieverCallback.h"
-
+#include <binder/IMemory.h>
 
 namespace android {
 
 class DataSource;
 struct ImageDecoder;
 struct FrameRect;
-
-struct RockitRetrieverCtx{
-    void  *mLibFd;
-    createMetaDataRetrieverFunc      *mCreateRetrieverFunc;
-    destroyMetaDataRetrieverFunc     *mDestroyRetrieverFunc;
-    createRockitMetaDataFunc         *mCreateMetaDataFunc;
-    destroyRockitMetaDataFunc        *mDestroyMetaDataFunc;
-    RTMetadataRetrieverInterface     *mRetriever;
-    RtMetaData                       *mRtMetaData;
-    RTMetadataRetrieverCallback      *mCallBack;
-};
+struct RockitRetrieverCtx;
 
 struct RockitMetadataRetriever : public MediaMetadataRetrieverBase {
 public:

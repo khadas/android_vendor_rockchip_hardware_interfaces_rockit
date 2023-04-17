@@ -26,6 +26,10 @@
 #include <media/openmax/OMX_IVCommon.h>
 #include <media/CharacterEncodingDetector.h>
 
+#include "RTLibDefine.h"
+#include "rt_metadata.h"
+#include "RTMetadataRetrieverInterface.h"
+#include "RTMetadataRetrieverCallback.h"
 #include "RockitMetadataRetriever.h"
 #include "RTMediaMetaKeys.h"
 
@@ -36,6 +40,17 @@ namespace android {
 #else
 #define Debug ALOGD
 #endif
+
+struct RockitRetrieverCtx{
+    void  *mLibFd;
+    createMetaDataRetrieverFunc      *mCreateRetrieverFunc;
+    destroyMetaDataRetrieverFunc     *mDestroyRetrieverFunc;
+    createRockitMetaDataFunc         *mCreateMetaDataFunc;
+    destroyRockitMetaDataFunc        *mDestroyMetaDataFunc;
+    RTMetadataRetrieverInterface     *mRetriever;
+    RtMetaData                       *mRtMetaData;
+    RTMetadataRetrieverCallback      *mCallBack;
+};
 
 enum RockitRetrieverMetaKey {
     RETRIEVER_KEY_METADATA,

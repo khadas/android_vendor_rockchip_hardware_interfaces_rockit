@@ -18,6 +18,7 @@
 #define RT_METADATA_RETRIEVER_CALLBACK_H_
 
 #include "rt_metadata.h"
+#include <binder/IMemory.h>
 
 namespace android {
 
