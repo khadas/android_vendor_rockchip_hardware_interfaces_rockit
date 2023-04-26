@@ -61,25 +61,35 @@ static uint32_t getBytesPerSample(AUDIO_BIT_WIDTH_E enBitwidth) {
 int32_t DummyDec::open(void *pDecoderAttr, void **ppDecoder) {
     ADEC_ATTR_CODEC_S *attr = (ADEC_ATTR_CODEC_S *)pDecoderAttr;
     TRANSPORT_TYPE transportFmt = (TRANSPORT_TYPE)attr->u32Resv[0];
+    XXX_DECODER_ERROR err = XXX_DEC_OK;
     ExtDummyContext *ctx = (ExtDummyContext *)malloc(sizeof(ExtDummyContext));
     memset(ctx, 0, sizeof(ExtDummyContext));
 
     ctx->mHandle = xxxDecoder_Open(transportFmt, 1);
     if(!ctx->mHandle) {
         ALOGD("xxxDecoder_Open failed");
-        *ppDecoder = NULL;
-        free(ctx);
-        return RT_ERR_UNKNOWN;
+        goto _FAIL;
     }
 
     if (attr->u32ExtraDataSize > 0 && attr->pExtraData != NULL) {
         ALOGD("config extradata size:%d", attr->u32ExtraDataSize);
-        xxxDecoder_ConfigRaw(ctx->mHandle, (uint8_t **)&attr->pExtraData, &attr->u32ExtraDataSize);
+        err = xxxDecoder_ConfigRaw(ctx->mHandle, (uint8_t **)&attr->pExtraData, &attr->u32ExtraDataSize);
+        if (err != XXX_DEC_OK) {
+            ALOGD("xxxDecoder_ConfigRaw fail : 0x%x", err);
+            goto _FAIL;
+        }
     }
     ctx->enBitwidth = AUDIO_BIT_WIDTH_16;
     *ppDecoder = (void *)ctx;
-
     return RT_OK;
+
+_FAIL:
+    if (ctx->mHandle) {
+        xxxDecoder_Close(ctx->mHandle);
+    }
+    free(ctx);
+    *ppDecoder = NULL;
+    return RT_ERR_UNSUPPORT;
 }
 
 int32_t DummyDec::decode(void *pDecoder, void *pDecParam) {

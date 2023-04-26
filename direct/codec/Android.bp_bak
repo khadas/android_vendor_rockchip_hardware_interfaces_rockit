@@ -2,6 +2,7 @@ cc_library {
     name: "librockit_ext_codec",
     srcs: [
         "DummyDec.cpp",
+        "RTCodecProfiles.cpp",
     ],
 
     shared_libs: [

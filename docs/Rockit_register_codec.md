@@ -166,6 +166,7 @@ int registerDummyDec(registerDecoderFunc* func) {
     // define context of DummyDec codec
     memset(&adecCtx, 0, sizeof(RTAdecDecoder));
     adecCtx.enType = RT_AUDIO_ID_XXX;   // for example RT_AUDIO_ID_PCM_ALAW
+    adecCtx.profiles = RTMediaProfiles::getSupportProfile(adecCtx.enType);
     snprintf(reinterpret_cast<char*>(adecCtx.aszName), sizeof(adecCtx.aszName), "ext_dummy");
     adecCtx.pfnOpenDecoder  = DummyDec::open;
     adecCtx.pfnDecodeFrm    = DummyDec::decode;
@@ -188,6 +189,7 @@ int registerDummyDec(registerDecoderFunc* func) {
 - dummyDec为外部注册解码器的示例，用户可仿照dummyDec代码实现具体的解码器。**需要强调的是，客户注册和使用解码器时，必现首先从版权权利人处获取注册解码器授权，并缴纳Licensing Fee。**
 - RT_AUDIO_ID_XXX修改为具体的音频codec类型，具体请见RTLibDefine.h的定义。
 - **Dummy.cpp为伪代码实现，为了防止编译不过，因此registerDummyDec中实现对DummyDec的注册默认注释不编译。当客户在DummyDec实现/对接完某具体解码器时，可在registerDummyDec函数打开注释的代码。**
+- 当某解码类型没有定义profile和level时，可设置adecCtx.profiles = NULL，否则需要定义当前注册解码支持的对应格式的profile和level。
 
 
 ```c++
@@ -219,9 +221,9 @@ int rockitRegisterCodec(registerDecoderFunc* func) {
 
 DummyDec解码示例。
 
-- **[open](####open)**：初始化g711a/u解码。
-- **[close](####close)**：关闭g711a/u解码器。
-- **[decode](####decode)**：g711a/u解码。
+- **[open](####open)**：初始化解码。
+- **[close](####close)**：关闭解码器。
+- **[decode](####decode)**：解码。
 - **[getFrameInfo](####getFrameInfo)**：获取解码音频帧信息。
 - **[reset](####reset)**：复位解码器。
 
@@ -251,7 +253,7 @@ INT32 DummyDec::open(RT_VOID *pDecoderAttr, RT_VOID **ppDecoder) ；
 【注意】
 
 - pDecoderAttr传入的采样率，声道数等参数，可能是通过解析文件的封装头得到，与实际音频编码的参数可能并不一致，因此该传入的值并不一定正确。
-- ppDecoder为open函数创建的解码器句柄，后续其他操作将
+- ppDecoder为open函数创建的解码器句柄。
 
 #### close
 
@@ -422,6 +424,7 @@ cc_library_shared {
 typedef struct _RTAdecDecoder {
     int32_t enType;       // see RTCodecID
     char aszName[17];
+    RTCodecProfiles *profiles;    // see RTCodecProfiles.h
     // open decoder
     int32_t (*pfnOpenDecoder)(void *pDecoderAttr, void **ppDecoder);
     int32_t (*pfnDecodeFrm)(void *pDecoder, void *pParam);
@@ -436,20 +439,35 @@ typedef struct _RTAdecDecoder {
 
 【成员】
 
-| 成员名称        | 描述                                        |
-| --------------- | ------------------------------------------- |
-| enType          | 解码协议。 见RTLibDefine.h中RTCodecID的定义 |
-| aszName         | 解码器名称。                                |
-| pfnOpenDecoder  | 打开解码器的函数指针。                      |
-| pfnDecodeFrm    | 解码的函数指针。                            |
-| pfnGetFrmInfo   | 获取音频帧信息的函数指针。                  |
-| pfnCloseDecoder | 关闭解码器的函数指针。                      |
-| pfnResetDecoder | 清空缓存 buffer，复位解码器。               |
+| 成员名称        | 描述                                                         |
+| --------------- | ------------------------------------------------------------ |
+| enType          | 解码协议。 见RTLibDefine.h中RTCodecID的定义。                |
+| aszName         | 解码器名称。注意外部注册解码名称，必须以"ext_"开头，比如“ext_g711a”。否则将导致注册失败。 |
+| profiles        | 解码器支持的profile和level。当解码器支持多个profile和level时，需将所以支持的profile和level都列举出来。 |
+| pfnOpenDecoder  | 打开解码器的函数指针。                                       |
+| pfnDecodeFrm    | 解码的函数指针。                                             |
+| pfnGetFrmInfo   | 获取音频帧信息的函数指针。                                   |
+| pfnCloseDecoder | 关闭解码器的函数指针。                                       |
+| pfnResetDecoder | 清空缓存 buffer，复位解码器。                                |
 
 【注意事项】
 
 - pfnOpenDecoder函数第一个参数pDecoderAttr为[ADEC_ATTR_CODEC_S](###ADEC_ATTR_CODEC_S)类型，用户可在对应的注册函数中强行类型转换，可访问到[ADEC_ATTR_CODEC_S](###ADEC_ATTR_CODEC_S)中的相关变量。
 - pfnDecodeFrm函数的第二个参数pDecParam为[AUDIO_ADENC_PARAM_S](###AUDIO_ADENC_PARAM_S)类型，用户可在对应的注册函数中强行类型转换，可访问到[AUDIO_ADENC_PARAM_S](###AUDIO_ADENC_PARAM_S)中的相关变量。
+
+- profiles：当解码器注册多个profile和level时，需将所以支持的profile和level都列举处理。
+
+  例如：定义了某解码类型的2个profile，RT_PROFILE_XXX_MAIN和 RT_PROFILE_XXX_HE。
+
+  需要注意的是，当用户定义了某解码器的profile时，必须以 { RT_PROFILE_UNKNOWN， "UNKNOWN"} 结尾。
+
+  ```c
+  static RTCodecProfiles sXXXProfiles[] = {
+      { RT_PROFILE_XXX_MAIN,               "XXX_MAIN" },
+      { RT_PROFILE_XXX_HE,                 "XXX_HE"   },
+      { RT_PROFILE_UNKNOWN,                "UNKNOWN"  },    // 必须以该项结尾
+  };
+  ```
 
 ### ADEC_ATTR_CODEC_S
 
@@ -463,7 +481,7 @@ typedef struct rkADEC_ATTR_CODEC_S {
     int32_t    enType;                // see RTCodecID
     uint32_t   u32Channels;
     uint32_t   u32SampleRate;
-    uint32_t   u32BitPerCodedSample;  // codewords
+    uint32_t   u32Bitrate;
 
     void       *pExtraData;
     uint32_t   u32ExtraDataSize;
@@ -480,7 +498,7 @@ typedef struct rkADEC_ATTR_CODEC_S {
 | enType           | 解码协议。 见RTLibDefine.h中RTCodecID的定义 |
 | u32Channels      | 码流声道数。                                |
 | u32SampleRate    | 码流采样率。                                |
-| u32Bitrate       | 音频数据比特率                              |
+| u32Bitrate       | 数据比特率                                  |
 | pExtraData       | 解码外部数据                                |
 | u32ExtraDataSize | 解码外部数据长度                            |
 | u32Resv[4]       | 保留字节，用于解码器参数扩展                |

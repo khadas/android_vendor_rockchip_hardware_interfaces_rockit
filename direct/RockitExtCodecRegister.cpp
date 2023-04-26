@@ -24,6 +24,7 @@
 #include "RockitExtCodecRegister.h"
 #include "RockitExtAdec.h"
 #include "DummyDec.h"
+#include "RTCodecProfiles.h"
 
 namespace android {
 
@@ -42,6 +43,8 @@ int registerDummyDec(registerDecoderFunc* func) {
     // define context of DummyDec codec
     memset(&adecCtx, 0, sizeof(RTAdecDecoder));
     adecCtx.enType = RT_AUDIO_ID_XXX;   // for example RT_AUDIO_ID_PCM_ALAW
+    adecCtx.profiles = RTMediaProfiles::getSupportProfile(adecCtx.enType);
+    // the name of register codec must start with "ext_"
     snprintf(reinterpret_cast<char*>(adecCtx.aszName), sizeof(adecCtx.aszName), "ext_dummy");
     adecCtx.pfnOpenDecoder  = DummyDec::open;
     adecCtx.pfnDecodeFrm    = DummyDec::decode;

@@ -19,6 +19,8 @@
 #ifndef _ROCKIT_EXT_ADEC_H_
 #define _ROCKIT_EXT_ADEC_H_
 
+#include "RTCodecProfiles.h"
+
 namespace android {
 
 typedef enum rkAUDIO_BIT_WIDTH_E {
@@ -51,7 +53,7 @@ typedef struct rkADEC_ATTR_CODEC_S {
     int32_t    enType;                // see RTCodecID
     uint32_t   u32Channels;
     uint32_t   u32SampleRate;
-    uint32_t   u32BitPerCodedSample;  // codewords
+    uint32_t   u32Bitrate;
 
     void       *pExtraData;
     uint32_t   u32ExtraDataSize;
@@ -71,8 +73,9 @@ typedef struct rkAUDIO_ADENC_PARAM_S {
 } AUDIO_ADENC_PARAM_S;
 
 typedef struct _RTAdecDecoder {
-    int32_t enType;                 // see RTCodecID
+    int32_t  enType;                 // see RTCodecID
     char aszName[17];
+    RTCodecProfiles *profiles;       // profiles this decoder support, see RTCodecProfiles.h
     // open decoder
     int32_t (*pfnOpenDecoder)(void *pDecoderAttr, void **ppDecoder);
     int32_t (*pfnDecodeFrm)(void *pDecoder, void *pParam);
