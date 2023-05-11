@@ -68,7 +68,7 @@ RockitMetadataRetriever::RockitMetadataRetriever() {
 
     mLastImageIndex = -1;
 
-    mCtx = (RockitRetrieverCtx*)malloc(sizeof(RockitRetrieverCtx));
+    mCtx = static_cast<RockitRetrieverCtx *>(malloc(sizeof(RockitRetrieverCtx)));
     assert(mCtx != NULL);
     memset(mCtx, 0, sizeof(RockitRetrieverCtx));
 
@@ -458,7 +458,7 @@ void RockitMetadataRetriever::parseMetaData() {
     void* tracks = NULL;
     meta->clear();
     meta->setInt32(kRetrieverKey, RETRIEVER_KEY_TRACKINFOR);
-    ret = mCtx->mRetriever->query(meta);
+    mCtx->mRetriever->query(meta);
 
     meta->findInt32(kUserInvokeTracksCount, &numTracks);
     Debug("%s:numTracks = %d", __FUNCTION__, numTracks);
@@ -489,14 +489,16 @@ void RockitMetadataRetriever::parseMetaData() {
     bool hasVideo = false;
     int32_t videoWidth = -1;
     int32_t videoHeight = -1;
-    int32_t videoFrameCount = 0;
     int32_t audioBitrate = -1;
     int32_t rotationAngle = -1;
+
+#if 0
     int32_t imageCount = 0;
     int32_t imagePrimary = 0;
     int32_t imageWidth = -1;
     int32_t imageHeight = -1;
     int32_t imageRotation = -1;
+#endif
 
     // The overall duration is the duration of the longest track.
     String8 timedTextLang;
@@ -569,7 +571,7 @@ void RockitMetadataRetriever::parseMetaData() {
 
     meta->clear();
     meta->setInt32(kRetrieverKey, RETRIEVER_KEY_DURATION);
-    ret = mCtx->mRetriever->query(meta);
+    mCtx->mRetriever->query(meta);
 
     int64_t duration = 0;
     meta->findInt64(kRetrieverKeyDuration, &duration);
@@ -582,6 +584,8 @@ void RockitMetadataRetriever::parseMetaData() {
     }
 
     if (hasVideo) {
+        //int32_t videoFrameCount = 0;
+
         mMetaData.add(METADATA_KEY_HAS_VIDEO, String8("yes"));
 
         sprintf(tmp, "%d", videoWidth);
@@ -593,12 +597,13 @@ void RockitMetadataRetriever::parseMetaData() {
         sprintf(tmp, "%d", rotationAngle);
         mMetaData.add(METADATA_KEY_VIDEO_ROTATION, String8(tmp));
 
-        if (videoFrameCount > 0) {
+        /*if (videoFrameCount > 0) {
             sprintf(tmp, "%d", videoFrameCount);
             mMetaData.add(METADATA_KEY_VIDEO_FRAME_COUNT, String8(tmp));
-        }
+        }*/
     }
 
+#if 0
     if (imageCount > 0) {
         mMetaData.add(METADATA_KEY_HAS_IMAGE, String8("yes"));
 
@@ -617,6 +622,7 @@ void RockitMetadataRetriever::parseMetaData() {
         sprintf(tmp, "%d", imageRotation);
         mMetaData.add(METADATA_KEY_IMAGE_ROTATION, String8(tmp));
     }
+#endif
 
     if (numTracks == 1 && hasAudio && audioBitrate >= 0) {
         sprintf(tmp, "%d", audioBitrate);

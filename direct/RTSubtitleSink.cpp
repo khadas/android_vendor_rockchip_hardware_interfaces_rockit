@@ -17,6 +17,9 @@
  * date:   2019/12/24
  */
 
+//#define LOG_NDEBUG 0
+#define LOG_TAG "RTSubteSink"
+
 #include "RTSubtitleSink.h"
 #include "RTGraphicWindowApi.h"
 #include "HdmiDefine.h"
@@ -27,16 +30,6 @@
 #include <utils/Log.h>
 #include <cutils/properties.h> // for property_get
 #include "RTChips.h"
-
-#ifdef LOG_TAG
-#undef LOG_TAG
-#endif
-#define LOG_TAG "SubtitleSink"
-
-#ifdef DEBUG_FLAG
-#undef DEBUG_FLAG
-#endif
-#define DEBUG_FLAG 0x0
 
 using namespace ::android;
 

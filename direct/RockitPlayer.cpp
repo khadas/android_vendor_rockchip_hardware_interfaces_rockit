@@ -151,12 +151,13 @@ RockitPlayer::~RockitPlayer() {
 
 status_t RockitPlayer::createPlayer() {
     ALOGV("createPlayer");
-    registerDecoderFunc *registerFunc = NULL;
     mCreatePlayerFunc    = PlayerLibLoader::getInstance()->mCreatePlayerFunc;
     mDestroyPlayerFunc   = PlayerLibLoader::getInstance()->mDestroyPlayerFunc;
     mCreateMetaDataFunc  = PlayerLibLoader::getInstance()->mCreateMetaDataFunc;
     mDestroyMetaDataFunc = PlayerLibLoader::getInstance()->mDestroyMetaDataFunc;
-    registerFunc         = PlayerLibLoader::getInstance()->mRegisterCodec;
+
+    registerDecoderFunc *registerFunc = PlayerLibLoader::getInstance()->mRegisterCodec;
+
     mPlayerImpl = (RTMediaPlayerInterface *)mCreatePlayerFunc();
     if (mPlayerImpl == NULL) {
         ALOGE("create player failed, player is null");

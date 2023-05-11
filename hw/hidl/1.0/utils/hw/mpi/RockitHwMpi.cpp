@@ -134,6 +134,7 @@ DataBufferCtx::DataBufferCtx() {
     mData = NULL;
     mSize = 0;
     mSite = BUFFER_SITE_BY_MPI;
+    mHandle = NULL;
 }
 
 DataBufferCtx::~DataBufferCtx() {
@@ -280,8 +281,8 @@ int RockitHwMpi::addDataBufferList(
 
 void RockitHwMpi::freeDataBuffer(int bufferId) {
     MpiCodecContext* ctx = (MpiCodecContext*)mCtx;
-    ALOGD("%s: size = %d, bufferId = %d", __FUNCTION__, (int)ctx->mDataList->size(), bufferId);
     if (ctx != NULL && ctx->mDataList != NULL) {
+        ALOGD("%s: size = %d, bufferId = %d", __FUNCTION__, (int)ctx->mDataList->size(), bufferId);
         for (int i = 0; i < ctx->mDataList->size(); i++){
             DataBufferCtx* buffer = ctx->mDataList->editItemAt(i);
             if (buffer && buffer->mUniqueID == bufferId) {
@@ -416,7 +417,7 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
             __FUNCTION__, type, width, height, format, fastMode, timeMode);
     }
 
-    if ((type <= 0) || (width <= 0) || (height <= 0)) {
+    if ((type == 0) || (width == 0) || (height == 0)) {
         ALOGE("%s: type = 0x%x, width = %d, height = %d, format = 0x%x not support",
             __FUNCTION__, type, width, height, format);
         goto FAIL;
@@ -425,10 +426,6 @@ int RockitHwMpi::init(const RockitHWParamPairs& pairs) {
     mpp_coding_type = (MppCodingType)type;
     if (mpp_coding_type == MPP_VIDEO_CodingUnused) {
         ALOGE("%s unsupport rockit codec id: 0x%x", __FUNCTION__, type);
-        goto FAIL;
-    }
-
-    if (width <= 0 || height <= 0) {
         goto FAIL;
     }
 
@@ -563,7 +560,7 @@ int RockitHwMpi::enqueue(const RockitHWBuffer& buffer) {
   //  newbuffer = (flags & (uint32_t)RockitHWBufferFlags::HW_FLAGS_NEW_HW_BUFFER);
 
     if (!eos) {
-        DataBufferCtx* bufferCtx = (DataBufferCtx*)findDataBuffer((int)buffer.bufferId);
+        DataBufferCtx* bufferCtx = static_cast<DataBufferCtx*>(findDataBuffer((int)buffer.bufferId));
         if (bufferCtx == NULL) {
             native_handle_t *handle;
             void *tmpPtr = NULL;
@@ -1041,7 +1038,7 @@ int RockitHwMpi::bufferReady() {
     MppApi *mpp_mpi        = ctx->mpp_mpi;
     MppBufferGroup frm_grp = ctx->frm_grp;
 
-    if ((mpp_ctx != NULL) && (mpp_ctx != NULL) && (frm_grp != NULL)) {
+    if ((mpp_ctx != NULL) && (frm_grp != NULL)) {
         mpp_mpi->control(mpp_ctx, MPP_DEC_SET_EXT_BUF_GROUP, frm_grp);
         mpp_mpi->control(mpp_ctx, MPP_DEC_SET_INFO_CHANGE_READY, NULL);
     } else {
@@ -1057,7 +1054,7 @@ int RockitHwMpi::enableHdrMeta(int enable) {
     MppCtx mpp_ctx         = ctx->mpp_ctx;
     MppApi *mpp_mpi        = ctx->mpp_mpi;
 
-    if ((mpp_ctx != NULL) && (mpp_ctx != NULL)) {
+    if (mpp_ctx != NULL) {
         MppDecCfg cfg;
         mpp_dec_cfg_init(&cfg);
         mpp_mpi->control(mpp_ctx, MPP_DEC_GET_CFG, cfg);
@@ -1077,7 +1074,7 @@ int RockitHwMpi::enableScaleDec(int enable) {
     MppCtx mpp_ctx         = ctx->mpp_ctx;
     MppApi *mpp_mpi        = ctx->mpp_mpi;
 
-    if ((mpp_ctx != NULL) && (mpp_ctx != NULL)) {
+    if (mpp_ctx != NULL) {
         MppDecCfg cfg;
         mpp_dec_cfg_init(&cfg);
         mpp_mpi->control(mpp_ctx, MPP_DEC_GET_CFG, cfg);

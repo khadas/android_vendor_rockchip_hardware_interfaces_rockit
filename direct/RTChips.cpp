@@ -16,15 +16,8 @@
  *
  */
 
-#ifdef LOG_TAG
-#undef LOG_TAG
-#endif
-#define LOG_TAG "RTChips"
-
-#ifdef DEBUG_FLAG
-#undef DEBUG_FLAG
-#endif
-#define DEBUG_FLAG 0x0
+//#define LOG_NDEBUG 0
+#define LOG_TAG "RKChipInfo"
 
 #include "RTChips.h"      // NOLINT
 
@@ -89,15 +82,14 @@ RKChipInfo* readCpuInforNode() {
     }
 
     char buffer[MAX_SOC_NAME_LENGTH] = {0};
-    char name[128];
-    char* ptr = RT_NULL;
     RKChipInfo* infor = RT_NULL;
 
     INT32 length = read(fd, buffer, MAX_SOC_NAME_LENGTH - 1);
     if (length > 0) {
-        ptr = strstr(buffer, "Hardware");
+        char* ptr = strstr(buffer, "Hardware");
         if (ptr != NULL) {
-            sscanf(ptr, "Hardware\t: Rockchip %s", name);
+            char name[128];
+            sscanf(ptr, "Hardware\t: Rockchip %30s", name);
 
             infor = match(name);
             if (infor == RT_NULL) {

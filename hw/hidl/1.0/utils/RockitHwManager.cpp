@@ -143,10 +143,9 @@ Return<Status> RockitHwManager::control(uint32_t cmd, const RockitHWParamPairs& 
 Return<void> RockitHwManager::query(uint32_t cmd, query_cb _hidl_cb) {
     RockitHWParamPairs reply;
     memset(&reply, 0, sizeof(RockitHWParamPairs));
-    int ret = -1;
     Status status = Status::BAD_VALUE;
     if (mImpl != NULL) {
-        ret = mImpl->query(cmd, reply);
+        int ret = mImpl->query(cmd, reply);
         if (ret != -1) {
             status = Status::OK;
         }

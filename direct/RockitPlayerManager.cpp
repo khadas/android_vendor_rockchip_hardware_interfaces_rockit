@@ -302,7 +302,7 @@ sp<MediaPlayerBase::AudioSink> RockitPlayerManager::getAudioSink() {
 
 
 status_t RockitPlayerManager::getUriFromFd(int fd, char **uri) {
-    size_t      uriSize = 0;
+    int         uriSize = 0;
     char        uriTmp[1024] = {0};
     const char *ptr = NULL;
     String8     path;
@@ -316,7 +316,7 @@ status_t RockitPlayerManager::getUriFromFd(int fd, char **uri) {
 
     path = uriTmp;
     ptr  = path.string();
-    ALOGD("getUriFromFd ptr: %p, uriSize: %zu, uri: %s *uri: %p uri: %p",
+    ALOGD("getUriFromFd ptr: %p, uriSize: %d, uri: %s *uri: %p uri: %p",
            ptr, uriSize, ptr, *uri, uri);
     memcpy(*uri, ptr, uriSize);
 

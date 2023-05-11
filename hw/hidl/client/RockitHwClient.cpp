@@ -86,7 +86,7 @@ RockitHwClient::~RockitHwClient() {
 }
 
 int RockitHwClient::init(int type, void* param) {
-    RTHWParamPairs* pairs = (RTHWParamPairs*)param;
+    RTHWParamPairs* pairs = static_cast<RTHWParamPairs *>(param);
     RockitHwCtx* ctx = (RockitHwCtx *)mCtx;
     RockitHWParamPairs hw;
     Status status = Status::NO_INIT;
@@ -123,7 +123,7 @@ int RockitHwClient::dequeue(RTHWBuffer* buffer) {
                             Status status1, const RockitHWBuffer& hw) {
                         status = status1;
                         if (status == Status::OK) {
-                            HwBuffer2RTBuffer(hw, (RTHWBuffer*)buffer);
+                            HwBuffer2RTBuffer(hw, static_cast<RTHWBuffer*>(buffer));
                         }
                     });
         }
@@ -169,7 +169,7 @@ int RockitHwClient::control(uint32_t cmd, void* param) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RockitHWParamPairs hw;
-        RTHWParamPairs* rt = (RTHWParamPairs*)param;
+        RTHWParamPairs* rt = static_cast<RTHWParamPairs *>(param);
         RTHWParam2RockitHWParam(hw, rt);
         status = ctx->mService->control(cmd, hw);
     }
@@ -181,7 +181,7 @@ int RockitHwClient::query(uint32_t cmd, void* param) {
     Status status = Status::NO_INIT;
     if (ctx != NULL && ctx->mService.get() != NULL) {
         RockitHWParamPairs hw;
-        RTHWParamPairs* rt = (RTHWParamPairs*)param;
+        RTHWParamPairs* rt = static_cast<RTHWParamPairs *>(param);
         RTHWParam2RockitHWParam(hw, rt);
         ctx->mService->query(cmd,
                     [&status, rt](
@@ -265,7 +265,7 @@ void RockitHwClient::RockitHWParam2RTHWParam(const RockitHWParamPairs& hw, RTHWP
     rt.counter = 0;
     if (hw.counter > 0) {
         if(rt.pairs == NULL) {
-            rt.pairs = (RTHWParamPair*)malloc(sizeof(RTHWParamPair)*rt.counter);
+            rt.pairs = static_cast<RTHWParamPair *>(malloc(sizeof(RTHWParamPair)*rt.counter));
             ALOGD("RockitHWParam2RTHWParam: malloc buffer, need to free");
         }
 

@@ -46,7 +46,10 @@ namespace android {
 class RockitHwClientInterface {
 public:
     RockitHwClientInterface();
+    RockitHwClientInterface(const RockitHwClientInterface &intf) = delete;
+    RockitHwClientInterface& operator=(const RockitHwClientInterface &intf) = delete;
     virtual ~RockitHwClientInterface();
+
     virtual int init(int type,void* param);
     virtual int commitBuffer(RTHWBuffer& buffer);
     virtual int giveBackBuffer(RTHWBuffer& buffer);
